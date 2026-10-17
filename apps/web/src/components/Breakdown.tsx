@@ -36,7 +36,7 @@ export default function Breakdown({ score }: { score: Score }) {
       <div className="bar" role="img" aria-label="Share of points by metric">
         {positive.map((b) => (
           <span
-            key={b.metric_id}
+            key={b.name}
             className={`seg-${score.breakdown.indexOf(b) % 6}`}
             style={{ width: `${(b.contribution / sum) * 100}%` }}
             title={`${b.name}: ${fmt(b.contribution)}`}

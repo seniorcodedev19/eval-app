@@ -1,5 +1,5 @@
 import Breakdown from "@/components/Breakdown";
-import ColumnChart, { type Col } from "@/components/ColumnChart";
+import PointsChart from "@/components/PointsChart";
 import RankBars from "@/components/RankBars";
 import StatusPill from "@/components/StatusPill";
 import WeekGrid from "@/components/WeekGrid";
@@ -7,11 +7,6 @@ import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { weekParam } from "@/lib/dates";
 import type { TeamWeekRow, User, WeekData } from "@/lib/types";
-
-function shortName(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return parts[0] || name;
-}
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const week = weekParam((await searchParams).week);
@@ -27,12 +22,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (!data.ok) return <div className="banner error">{data.error}</div>;
   const d = data.data;
   const rows = team.ok ? team.data.rows : [];
-  const bars: Col[] = rows.map((r) => ({
-    label: shortName(r.name),
-    value: r.total,
-    highlight: r.user_id === me.id,
-    tone: r.status === "approved" ? "ok" : r.status === "submitted" ? "wait" : "muted",
-  }));
 
   return (
     <>
@@ -49,10 +38,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="panel">
         {!team.ok ? (
           <div className="banner error">{team.error}</div>
-        ) : bars.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div className="empty">No people to chart yet this week.</div>
         ) : (
-          <ColumnChart className="people" items={bars} label="Everyone's points this week" />
+          <PointsChart rows={rows} meId={me.id} />
         )}
       </div>
 

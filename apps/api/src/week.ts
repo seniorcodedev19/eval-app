@@ -140,6 +140,7 @@ export async function weekSnapshot(user: { id: number; team_id: number | null },
 
 export const publicReport = (r: ReportRow | null) =>
   r && {
+    id: r.id,
     status: r.status,
     summary: r.summary,
     submitted_at: r.submitted_at,

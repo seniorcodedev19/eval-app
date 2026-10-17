@@ -213,12 +213,73 @@ week.post("/reports/:id/review", requireRole("manager", "admin"), h(async (req, 
   res.json({ ok: true, status: "approved", total });
 }));
 
+// Admins can move a week between in progress, review, approved, and returned.
+week.patch("/week/status", requireRole("admin"), h(async (req, res) => {
+  const actor = req.user!;
+  const b = z
+    .object({
+      user_id: z.number().int(),
+      week_start: dateStr,
+      status: z.enum(["draft", "submitted", "approved", "returned"]),
+      comment: z.string().trim().max(1000).optional(),
+    })
+    .parse(req.body);
+  const ws = weekStartOf(b.week_start);
+  const target = await getUser(b.user_id);
+  const snap = await weekSnapshot(target, ws);
+
+  if (b.status === "approved") {
+    if (!snap.hasData && !snap.report) throw new HttpError(400, "There is nothing to approve for this week");
+    const bonus = snap.report?.bonus ?? 0;
+    const total = r2(snap.live.total + bonus);
+    await pool.query(
+      `insert into weekly_reports (user_id, week_start, status, reviewer_id, reviewed_at, review_comment, bonus, total, achievement_pct, breakdown)
+       values ($1,$2,'approved',$3,now(),$4,$5,$6,$7,$8)
+       on conflict (user_id, week_start) do update set
+         status='approved', reviewer_id=$3, reviewed_at=now(), review_comment=$4,
+         total=$6, achievement_pct=$7, breakdown=$8`,
+      [
+        target.id,
+        ws,
+        actor.id,
+        b.comment ?? snap.report?.review_comment ?? null,
+        bonus,
+        total,
+        snap.live.achievement_pct,
+        JSON.stringify(snap.live.breakdown),
+      ],
+    );
+  } else {
+    await pool.query(
+      `insert into weekly_reports (user_id, week_start, status, summary, submitted_at, reviewer_id, reviewed_at, review_comment, bonus, total, achievement_pct, breakdown)
+       values ($1,$2,$3,$4,$5,$6,now(),$7,0,null,null,null)
+       on conflict (user_id, week_start) do update set
+         status=$3,
+         submitted_at=case when $3='submitted' then now() else weekly_reports.submitted_at end,
+         reviewer_id=$6, reviewed_at=now(), review_comment=$7,
+         total=null, achievement_pct=null, breakdown=null`,
+      [
+        target.id,
+        ws,
+        b.status,
+        snap.report?.summary ?? null,
+        b.status === "submitted" ? new Date() : (snap.report?.submitted_at ?? null),
+        actor.id,
+        b.comment ?? snap.report?.review_comment ?? null,
+      ],
+    );
+  }
+  await audit(actor.id, "status", "report", `${target.id}/${ws}`, { status: b.status });
+  res.json({ ok: true, status: b.status });
+}));
+
 async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
   const teamId = actor.role === "admin" ? (teamIdParam ?? null) : actor.team_id;
   if (teamId === null && actor.role !== "admin") return [];
-  const { rows: users } = await pool.query<User>(
-    `select id, email, name, role, team_id, active from users
-     where active and ($1::int is null or team_id = $1) order by name, email`,
+  const { rows: users } = await pool.query<User & { team_name: string | null }>(
+    `select u.id, u.email, u.name, u.role, u.team_id, u.active, t.name as team_name
+     from users u left join teams t on t.id = u.team_id
+     where u.active and ($1::int is null or u.team_id = $1) order by u.name, u.email`,
     [teamId],
   );
   const rows = [];
@@ -227,6 +288,17 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
     const status = s.report?.status ?? "draft";
     const hideOthers =
       actor.role === "member" && u.id !== actor.id && status !== "submitted" && status !== "approved";
+    const metric_points = hideOthers
+      ? []
+      : Object.values(
+          s.score.breakdown.reduce<Record<number, { id: number; name: string; points: number }>>((acc, b) => {
+            const name = b.part === "bonus" ? b.name.replace(/ overtime$/, "") : b.name;
+            const cur = acc[b.metric_id] ?? { id: b.metric_id, name, points: 0 };
+            cur.points += Number(b.contribution);
+            acc[b.metric_id] = cur;
+            return acc;
+          }, {}),
+        );
     rows.push({
       user_id: u.id,
       name: u.name || u.email,
@@ -239,6 +311,9 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
       bonus: hideOthers ? 0 : s.score.bonus,
       achievement_pct: hideOthers ? null : s.score.achievement_pct,
       day_points: hideOthers ? s.day_points.map(() => 0) : s.day_points,
+      team_id: u.team_id,
+      team_name: u.team_name,
+      metric_points,
     });
   }
   return rows;

@@ -68,6 +68,7 @@ export interface Score {
   breakdown: MetricScore[];
 }
 export interface WeekReport {
+  id?: number;
   status: Status;
   summary: string | null;
   submitted_at: string | null;
@@ -102,6 +103,9 @@ export interface TeamWeekRow {
   bonus: number;
   achievement_pct: number | null;
   day_points: number[];
+  team_id: number | null;
+  team_name: string | null;
+  metric_points: { id: number; name: string; points: number }[];
 }
 export interface QueueItem {
   report_id: number;

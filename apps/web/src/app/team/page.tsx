@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import ApproveWeekButton from "@/components/ApproveWeekButton";
-import StatusPill from "@/components/StatusPill";
+import ReportStatusControl from "@/components/ReportStatusControl";
 import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { todayUtc, weekParam } from "@/lib/dates";
@@ -98,7 +98,12 @@ export default async function TeamPage({
                     <span className="pill">{r.role}</span>
                   </td>
                   <td>
-                    <StatusPill status={r.status} />
+                    <ReportStatusControl
+                      userId={r.user_id}
+                      weekStart={res.data.week_start}
+                      status={r.status}
+                      canEdit={me.role === "admin"}
+                    />
                   </td>
                   {r.has_data ? (
                     <>

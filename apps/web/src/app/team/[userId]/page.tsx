@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Breakdown from "@/components/Breakdown";
-import StatusPill from "@/components/StatusPill";
+import ReportStatusControl from "@/components/ReportStatusControl";
 import Trend from "@/components/Trend";
 import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
@@ -54,7 +54,12 @@ export default async function PersonPage({
           </p>
         </div>
         <div className="row" style={{ alignItems: "center" }}>
-          <StatusPill status={d.status} />
+          <ReportStatusControl
+            userId={person.id}
+            weekStart={d.week_start}
+            status={d.status}
+            canEdit={me.role === "admin"}
+          />
           <WeekPicker base={`/team/${person.id}`} weekStart={d.week_start} weekEnd={d.week_end} today={d.today} />
         </div>
       </div>
