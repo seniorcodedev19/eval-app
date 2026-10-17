@@ -14,6 +14,21 @@ export interface Team {
   id: number;
   name: string;
 }
+export interface Period {
+  id: number;
+  label: string;
+  start_date: string;
+  end_date: string;
+  locked: boolean;
+}
+export interface Entry {
+  metric_id: number;
+  planned: number;
+  done: number;
+  bonus: number;
+  note: string | null;
+  updated_at?: string;
+}
 export interface Metric {
   id: number;
   key: string;
@@ -48,6 +63,28 @@ export interface Score {
   achievement_pct: number | null;
   breakdown: MetricScore[];
 }
+export interface ScoreResponse {
+  user: User;
+  period: Period;
+  score: Score;
+}
+export interface TrendPoint {
+  period_id: number;
+  label: string;
+  total: number;
+  achievement_pct: number | null;
+}
+export interface TeamRow {
+  user_id: number;
+  name: string;
+  email: string;
+  team_id: number | null;
+  role: Role;
+  has_data: boolean;
+  total: number;
+  bonus: number;
+  achievement_pct: number | null;
+}
 export interface WeekReport {
   status: Status;
   summary: string | null;
@@ -80,6 +117,7 @@ export interface TeamWeekRow {
   total: number;
   bonus: number;
   achievement_pct: number | null;
+  day_points: number[];
 }
 export interface QueueItem {
   report_id: number;

@@ -55,7 +55,7 @@ export default async function PersonPage({
         <PeriodPicker periods={periods} value={period.id} />
       </div>
 
-      {period.locked && <div className="banner note">This period is locked. Entries can't be changed.</div>}
+      {period.locked && <div className="banner note">This period is locked. Entries can&apos;t be changed.</div>}
       <Breakdown score={score.data.score} />
 
       {canEdit && entries.ok && metrics.ok && (

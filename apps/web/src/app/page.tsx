@@ -4,13 +4,13 @@ import { auth } from "@/auth";
 import ColumnChart from "@/components/ColumnChart";
 
 const sample = [
+  { label: "Sun", value: 0 },
   { label: "Mon", value: 14 },
   { label: "Tue", value: 21 },
   { label: "Wed", value: 11 },
   { label: "Thu", value: 24, highlight: true },
   { label: "Fri", value: 18 },
   { label: "Sat", value: 0 },
-  { label: "Sun", value: 0 },
 ];
 
 export default async function Landing() {

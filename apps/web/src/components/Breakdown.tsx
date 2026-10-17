@@ -8,7 +8,7 @@ export default function Breakdown({ score }: { score: Score }) {
     return (
       <div className="panel empty">
         <strong>No results entered for this week yet.</strong>
-        <div>Enter your numbers for each day on the Report tab.</div>
+        <div>Enter your numbers for each day in the week grid above.</div>
       </div>
     );
   }
