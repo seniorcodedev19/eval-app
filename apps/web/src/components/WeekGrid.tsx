@@ -124,7 +124,7 @@ export default function WeekGrid({ data }: { data: WeekData }) {
         )}
         {data.status === "approved" && (
           <div className="banner note">
-            Approved{data.report?.review_comment ? `: ${data.report.review_comment}` : "."} Entries are locked.
+            Approved{data.report?.review_comment ? `: ${data.report.review_comment}.` : "."} Entries are locked.
           </div>
         )}
         {data.editable && (

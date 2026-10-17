@@ -41,7 +41,10 @@ export default function RankBars({ rows }: { rows: TeamWeekRow[] }) {
               {r.name} <StatusPill status={r.status} />
             </div>
             <div className="track" role="img" aria-label={`${r.name}: ${fmt(r.total)} points`}>
-              <span style={{ width: `${Math.max((r.total / max) * 100, r.has_data ? 2 : 0)}%` }} />
+              <span
+                className={r.status === "approved" ? "ok" : r.status === "submitted" ? "wait" : ""}
+                style={{ width: `${Math.max((r.total / max) * 100, r.has_data ? 2 : 0)}%` }}
+              />
             </div>
             <div className="val">{r.has_data ? fmt(r.total) : "–"}</div>
           </li>

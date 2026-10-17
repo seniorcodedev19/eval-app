@@ -27,7 +27,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const isAdmin = adminEmails().includes(email);
 
     const { rows } = await pool.query<User>(
-      `insert into users (email, name, role) values ($1, $2, $3)
+      `insert into users (email, name, role, team_id)
+       values ($1, $2, $3, (select id from teams order by id limit 1))
        on conflict (email) do update set
          name = coalesce(nullif(excluded.name, ''), users.name),
          role = case when $4::boolean then 'admin' else users.role end

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import ColumnChart from "@/components/ColumnChart";
 import ProgressList from "@/components/ProgressList";
-import RankBars from "@/components/RankBars";
+import ReviewQueue from "@/components/ReviewQueue";
 import StatusPill from "@/components/StatusPill";
+import TeamResults from "@/components/TeamResults";
 import TodayEntry from "@/components/TodayEntry";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { shortDay, weekLabel } from "@/lib/dates";
@@ -14,7 +15,7 @@ export default async function Dashboard() {
   const manager = me.role !== "member";
   const [week, team, queue] = await Promise.all([
     tryFetch<WeekData>("/week"),
-    manager ? tryFetch<{ rows: TeamWeekRow[] }>("/team-week") : null,
+    tryFetch<{ rows: TeamWeekRow[] }>("/team-week"),
     manager ? tryFetch<QueueItem[]>("/review-queue") : null,
   ]);
 
@@ -87,16 +88,13 @@ export default async function Dashboard() {
 
       {manager && (
         <>
-          <h2>Team this week</h2>
-          {queue?.ok && queue.data.length > 0 && (
-            <div className="banner note">
-              {queue.data.length} {queue.data.length === 1 ? "report is" : "reports are"} waiting for your review.{" "}
-              <Link href="/report">Review now</Link>
-            </div>
-          )}
-          {team?.ok ? <RankBars rows={team.data.rows} /> : <div className="banner error">{team?.error}</div>}
+          <h2>Waiting for your review</h2>
+          {queue?.ok ? <ReviewQueue items={queue.data} /> : <div className="banner error">{queue?.error}</div>}
         </>
       )}
+
+      <h2>Everyone&apos;s results</h2>
+      {team?.ok ? <TeamResults rows={team.data.rows} meId={me.id} /> : <div className="banner error">{team?.error}</div>}
     </>
   );
 }

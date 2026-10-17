@@ -18,16 +18,13 @@ export default async function Landing() {
 
   return (
     <>
-      <header className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ fontSize: 17 }}>Eval</strong>
-        <div className="row" style={{ alignItems: "center" }}>
-          <Link className="btn secondary" href="/login">
-            Sign in
-          </Link>
-          <Link className="btn" href="/signup">
-            Sign up
-          </Link>
-        </div>
+      <header className="row" style={{ justifyContent: "flex-end", alignItems: "center" }}>
+        <Link className="btn secondary" href="/login">
+          Sign in
+        </Link>
+        <Link className="btn" href="/signup">
+          Sign up
+        </Link>
       </header>
 
       <section className="hero">

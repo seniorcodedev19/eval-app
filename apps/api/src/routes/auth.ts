@@ -25,8 +25,8 @@ publicAuth.post(
     const password_hash = await hashPassword(password);
     try {
       const { rows } = await pool.query(
-        `insert into users (email, name, role, password_hash)
-         values ($1, $2, 'member', $3)
+        `insert into users (email, name, role, password_hash, team_id)
+         values ($1, $2, 'member', $3, (select id from teams order by id limit 1))
          returning id, email, name`,
         [email, display, password_hash],
       );

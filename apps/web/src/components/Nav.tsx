@@ -1,6 +1,7 @@
 import { signOut } from "@/auth";
 import type { User } from "@/lib/types";
 import NavLinks from "./NavLinks";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Nav({ me }: { me: User }) {
   const links = [
@@ -16,19 +17,22 @@ export default function Nav({ me }: { me: User }) {
     <nav className="side" aria-label="Main">
       <div className="brand">Eval</div>
       <NavLinks links={links} />
-      <div className="who">
-        <strong>{me.name || me.email}</strong>
-        {me.role}
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/" });
-          }}
-        >
-          <button className="link" type="submit" style={{ padding: "8px 0" }}>
-            Log out
-          </button>
-        </form>
+      <div className="side-footer">
+        <ThemeToggle />
+        <div className="who">
+          <strong>{me.name || me.email}</strong>
+          {me.role}
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/" });
+            }}
+          >
+            <button className="link" type="submit" style={{ padding: "8px 0" }}>
+              Log out
+            </button>
+          </form>
+        </div>
       </div>
     </nav>
   );

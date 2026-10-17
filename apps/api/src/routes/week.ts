@@ -174,9 +174,8 @@ week.post("/reports/:id/review", requireRole("manager", "admin"), h(async (req, 
 }));
 
 async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
-  if (actor.role === "member") throw new HttpError(403, "Not allowed");
   const teamId = actor.role === "admin" ? (teamIdParam ?? null) : actor.team_id;
-  if (actor.role === "manager" && teamId === null) throw new HttpError(400, "You are not assigned to a team yet");
+  if (teamId === null && actor.role !== "admin") return [];
   const { rows: users } = await pool.query<User>(
     `select id, email, name, role, team_id, active from users
      where active and ($1::int is null or team_id = $1) order by name, email`,
@@ -185,16 +184,19 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
   const rows = [];
   for (const u of users) {
     const s = await weekSnapshot(u, ws);
+    const status = s.report?.status ?? "draft";
+    const hideOthers =
+      actor.role === "member" && u.id !== actor.id && status !== "submitted" && status !== "approved";
     rows.push({
       user_id: u.id,
       name: u.name || u.email,
       email: u.email,
       role: u.role,
-      status: s.report?.status ?? "draft",
-      has_data: s.hasData,
-      total: s.score.total,
-      bonus: s.score.bonus,
-      achievement_pct: s.score.achievement_pct,
+      status,
+      has_data: hideOthers ? false : s.hasData,
+      total: hideOthers ? 0 : s.score.total,
+      bonus: hideOthers ? 0 : s.score.bonus,
+      achievement_pct: hideOthers ? null : s.score.achievement_pct,
     });
   }
   return rows;

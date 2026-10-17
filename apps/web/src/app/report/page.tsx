@@ -1,8 +1,8 @@
 import Breakdown from "@/components/Breakdown";
 import ColumnChart from "@/components/ColumnChart";
 import MetricsManager from "@/components/MetricsManager";
-import RankBars from "@/components/RankBars";
 import ReviewQueue from "@/components/ReviewQueue";
+import TeamResults from "@/components/TeamResults";
 import StatusPill from "@/components/StatusPill";
 import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
@@ -22,7 +22,7 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
     tryFetch<WeekData>(`/week${wq}`),
     tryFetch<HistoryPoint[]>("/history"),
     manager ? tryFetch<QueueItem[]>("/review-queue") : null,
-    manager ? tryFetch<{ rows: TeamWeekRow[] }>(`/team-week${wq}`) : null,
+    tryFetch<{ rows: TeamWeekRow[] }>(`/team-week${wq}`),
     manager ? tryFetch<Metric[]>("/metrics") : null,
     me.role === "admin" ? tryFetch<Team[]>("/teams") : null,
   ]);
@@ -67,15 +67,21 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
         <>
           <h2>Waiting for your review</h2>
           {queue?.ok ? <ReviewQueue items={queue.data} /> : <div className="banner error">{queue?.error}</div>}
+        </>
+      )}
 
-          <div className="head" style={{ marginTop: 32, marginBottom: 10 }}>
-            <h2 style={{ margin: 0 }}>Team, this week</h2>
-            <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
-              Download CSV
-            </a>
-          </div>
-          {team?.ok ? <RankBars rows={team.data.rows} /> : <div className="banner error">{team?.error}</div>}
+      <div className="head" style={{ marginTop: 32, marginBottom: 10 }}>
+        <h2 style={{ margin: 0 }}>Everyone this week</h2>
+        {manager && (
+          <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
+            Download CSV
+          </a>
+        )}
+      </div>
+      {team?.ok ? <TeamResults rows={team.data.rows} meId={me.id} /> : <div className="banner error">{team?.error}</div>}
 
+      {manager && (
+        <>
           <h2>Metrics</h2>
           <p className="sub" style={{ marginTop: -4 }}>
             Metrics your team reports on. Weight and target changes apply to weeks that aren&apos;t approved yet.

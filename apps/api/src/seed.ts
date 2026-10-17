@@ -5,15 +5,19 @@ async function main() {
   await pool.query("insert into teams (name) values ('Engineering') on conflict do nothing");
   const adminEmail = "kherrmann9319@gmail.com";
   const adminHash = await hashPassword("admin");
+  const team = await pool.query<{ id: number }>("select id from teams where name = 'Engineering'");
+  const teamId = team.rows[0]?.id ?? null;
   await pool.query(
-    `insert into users (email, name, role, password_hash)
-     values ($1, $2, 'admin', $3)
+    `insert into users (email, name, role, password_hash, team_id)
+     values ($1, $2, 'admin', $3, $4)
      on conflict (email) do update set
        role = 'admin',
        password_hash = excluded.password_hash,
-       name = coalesce(nullif(users.name, ''), excluded.name)`,
-    [adminEmail, "Admin", adminHash],
+       name = coalesce(nullif(users.name, ''), excluded.name),
+       team_id = coalesce(users.team_id, excluded.team_id)`,
+    [adminEmail, "Admin", adminHash, teamId],
   );
+  await pool.query("update users set team_id = $1 where team_id is null", [teamId]);
   // Global metrics (team_id null) apply to every team. Managers add their own per team in the app.
   await pool.query(
     `insert into metrics (key, name, formula_type, weight, cap, target, unit) values
