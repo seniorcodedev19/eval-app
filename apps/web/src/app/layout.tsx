@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import Nav from "@/components/Nav";
 import { tryFetch } from "@/lib/api";
 import type { User } from "@/lib/types";
@@ -33,6 +33,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {error ? (
               <div className="banner error" role="alert">
                 <strong>Can't load your account.</strong> {error}
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut({ redirectTo: "/login" });
+                  }}
+                >
+                  <button className="btn secondary" type="submit" style={{ marginTop: 10 }}>
+                    Sign out
+                  </button>
+                </form>
               </div>
             ) : (
               children

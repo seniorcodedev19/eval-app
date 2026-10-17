@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { auth } from "@/auth";
 import ColumnChart from "@/components/ColumnChart";
 
 const sample = [
@@ -20,9 +20,14 @@ export default async function Landing() {
     <>
       <header className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <strong style={{ fontSize: 17 }}>Eval</strong>
-        <Link className="btn secondary" href="/login">
-          Sign in
-        </Link>
+        <div className="row" style={{ alignItems: "center" }}>
+          <Link className="btn secondary" href="/login">
+            Sign in
+          </Link>
+          <Link className="btn" href="/signup">
+            Sign up
+          </Link>
+        </div>
       </header>
 
       <section className="hero">
@@ -35,16 +40,14 @@ export default async function Landing() {
         <p className="lead">
           Everyone enters a few numbers each day. Totals build up on their own, and at the weekend your manager reviews and approves the week.
         </p>
-        <form
-          action={async () => {
-            "use server";
-            await signIn("google", { redirectTo: "/dashboard" });
-          }}
-        >
-          <button className="btn big" type="submit">
-            Continue with Google
-          </button>
-        </form>
+        <div className="row">
+          <Link className="btn big" href="/signup">
+            Create an account
+          </Link>
+          <Link className="btn secondary" href="/login">
+            Sign in
+          </Link>
+        </div>
       </section>
 
       <section className="panel" aria-label="Example week">

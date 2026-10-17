@@ -1,47 +1,65 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+
+const googleReady = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if ((await auth())?.user) redirect("/dashboard");
   const sp = await searchParams;
-  const devLogin = process.env.AUTH_DEV_LOGIN === "true" && process.env.NODE_ENV !== "production";
+  const badCreds = sp.error === "CredentialsSignin" || sp.error === "CallbackRouteError";
 
   return (
     <div className="login panel">
       <h1>Sign in to Eval</h1>
-      <p className="sub">Use your company Google account.</p>
-      {sp.error && (
+      <p className="sub">Use the email and password for your account.</p>
+      {badCreds && (
+        <div className="banner error" role="alert">
+          Invalid email or password.
+        </div>
+      )}
+      {sp.error && !badCreds && (
         <div className="banner error" role="alert">
           Sign-in was refused. Use an account from your company domain.
         </div>
       )}
       <form
-        action={async () => {
+        action={async (formData: FormData) => {
           "use server";
-          await signIn("google", { redirectTo: "/dashboard" });
+          await signIn("credentials", {
+            email: String(formData.get("email") ?? ""),
+            password: String(formData.get("password") ?? ""),
+            redirectTo: "/dashboard",
+          });
         }}
       >
+        <label htmlFor="email">
+          Email
+          <input id="email" name="email" type="email" autoComplete="username" required placeholder="you@example.com" />
+        </label>
+        <label htmlFor="password">
+          Password
+          <input id="password" name="password" type="password" autoComplete="current-password" required />
+        </label>
         <button className="btn" type="submit">
-          Continue with Google
+          Sign in
         </button>
       </form>
-
-      {devLogin && (
+      {googleReady && (
         <form
-          action={async (formData: FormData) => {
+          action={async () => {
             "use server";
-            await signIn("credentials", { email: String(formData.get("email") ?? ""), redirectTo: "/dashboard" });
+            await signIn("google", { redirectTo: "/dashboard" });
           }}
         >
-          <label htmlFor="email">Local development only: sign in by email</label>
-          <div className="row">
-            <input id="email" name="email" type="email" required placeholder="you@example.com" />
-            <button className="btn secondary" type="submit">
-              Sign in
-            </button>
-          </div>
+          <button className="btn secondary" type="submit">
+            Continue with Google
+          </button>
         </form>
       )}
+      <p className="alt">
+        No account yet? <Link href="/signup">Sign up</Link>
+      </p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 
-const PUBLIC = new Set(["/", "/login"]);
+const PUBLIC = new Set(["/", "/login", "/signup"]);
 
 export default auth((req) => {
   if (!req.auth && !PUBLIC.has(req.nextUrl.pathname)) {

@@ -3,25 +3,34 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 const domain = process.env.ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase();
-// Email-only sign-in for local development. Never enabled in production builds.
-const devLogin = process.env.AUTH_DEV_LOGIN === "true" && process.env.NODE_ENV !== "production";
+const googleReady = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+const apiUrl = process.env.API_URL ?? "http://localhost:4000";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Google({
-      authorization: { params: { prompt: "select_account", ...(domain ? { hd: domain } : {}) } },
-    }),
-    ...(devLogin
+    ...(googleReady
       ? [
-          Credentials({
-            credentials: { email: {} },
-            async authorize(creds) {
-              const email = String(creds?.email ?? "").trim().toLowerCase();
-              return email ? { id: email, email, name: email.split("@")[0] } : null;
-            },
+          Google({
+            authorization: { params: { prompt: "select_account", ...(domain ? { hd: domain } : {}) } },
           }),
         ]
       : []),
+    Credentials({
+      credentials: { email: {}, password: {} },
+      async authorize(creds) {
+        const email = String(creds?.email ?? "").trim();
+        const password = String(creds?.password ?? "");
+        if (!email || !password) return null;
+        const res = await fetch(`${apiUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) return null;
+        const user = (await res.json()) as { id: number; email: string; name: string };
+        return { id: String(user.id), email: user.email, name: user.name };
+      },
+    }),
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },

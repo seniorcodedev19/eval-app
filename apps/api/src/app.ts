@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { authenticate } from "./auth";
+import { publicAuth } from "./routes/auth";
 import { core } from "./routes/core";
 import { interviews } from "./routes/interviews";
 import { metrics } from "./routes/metrics";
@@ -17,6 +18,7 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use(publicAuth);
 app.use(authenticate);
 app.use(core);
 app.use(metrics);
