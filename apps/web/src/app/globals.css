@@ -261,6 +261,31 @@ input[type="checkbox"] { width: 18px; height: 18px; }
 .trend .col.tone-muted .b { background: var(--line); }
 .trend .col.hl .b { outline: 2px solid var(--ink); outline-offset: 2px; }
 
+.linechart { width: 100%; height: auto; display: block; overflow: visible; }
+.linechart-grid { stroke: var(--line); stroke-width: 1; }
+.linechart-label { fill: var(--muted); font-size: 11px; }
+.linechart-line { stroke-linecap: round; stroke-linejoin: round; }
+.linechart-fill { opacity: 0.08; }
+.linechart-dot { stroke: var(--surface); stroke-width: 1.5; }
+.linechart-legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.linechart-legend .swatch {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 .rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .rank li { display: grid; grid-template-columns: minmax(110px, 240px) minmax(0, 1fr) 72px; gap: 12px; align-items: center; }
 .rank .val { text-align: right; font-weight: 600; }

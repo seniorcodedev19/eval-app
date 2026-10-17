@@ -75,7 +75,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
           </thead>
           <tbody>
             {metrics.map((m) => (
-              <Row key={`${m.id}-${m.weight}-${m.target}-${m.unit}-${m.active}`} m={m} canEdit={me.role === "admin" || m.team_id === me.team_id} />
+              <Row key={`${m.id}-${m.weight}-${m.target}-${m.unit}-${m.active}`} m={m} canEdit={me.role === "admin"} />
             ))}
           </tbody>
         </table>

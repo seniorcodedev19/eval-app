@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { addDays, weekLabel, weekStartOf } from "@/lib/dates";
 
-// Previous / next week links. `thisWeek` is the Monday of the current week.
+// Previous / next week links. `thisWeek` is the Sunday of the current week.
 export default function WeekPicker({
   base,
   weekStart,

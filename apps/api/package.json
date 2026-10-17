@@ -8,6 +8,7 @@
     "migrate": "tsx --env-file=.env src/migrate.ts",
     "seed": "tsx --env-file=.env src/seed.ts",
     "test": "tsx --test src/scoring.test.ts src/scoring.week.test.ts",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,7 +23,9 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
+    "eslint": "^9.39.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.2"
   }
 }

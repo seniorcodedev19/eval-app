@@ -1,4 +1,4 @@
-// Weeks run Monday to Sunday; dates are 'YYYY-MM-DD' strings handled in UTC.
+// Weeks run Sunday to Saturday; dates are 'YYYY-MM-DD' strings handled in UTC.
 export const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 export function addDays(s: string, n: number): string {
@@ -9,7 +9,7 @@ export function addDays(s: string, n: number): string {
 
 export function weekStartOf(s: string): string {
   const d = new Date(`${s}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
   return isoDate(d);
 }
 

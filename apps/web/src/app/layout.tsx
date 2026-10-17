@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
             {error ? (
               <div className="banner error" role="alert">
-                <strong>Can't load your account.</strong> {error}
+                <strong>Can&apos;t load your account.</strong> {error}
                 <form
                   action={async () => {
                     "use server";

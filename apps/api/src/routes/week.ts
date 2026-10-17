@@ -197,6 +197,7 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
       total: hideOthers ? 0 : s.score.total,
       bonus: hideOthers ? 0 : s.score.bonus,
       achievement_pct: hideOthers ? null : s.score.achievement_pct,
+      day_points: hideOthers ? s.day_points.map(() => 0) : s.day_points,
     });
   }
   return rows;

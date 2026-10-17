@@ -6,7 +6,6 @@ import ThemeToggle from "./ThemeToggle";
 export default function Nav({ me }: { me: User }) {
   const links = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/report", label: "Report" },
     { href: "/time", label: "Time tracking" },
     { href: "/interviews", label: "Interviews" },
     { href: "/profile", label: "Profile" },

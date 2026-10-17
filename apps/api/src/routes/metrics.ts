@@ -34,7 +34,7 @@ const fields = {
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "metric";
 
-metrics.post("/metrics", requireRole("manager", "admin"), h(async (req, res) => {
+metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
   const actor = req.user!;
   const b = z
     .object({ ...fields, team_id: z.number().int().nullable() })
@@ -72,7 +72,7 @@ metrics.post("/metrics", requireRole("manager", "admin"), h(async (req, res) => 
   res.status(201).json(rows[0]);
 }));
 
-metrics.patch("/metrics/:id", requireRole("manager", "admin"), h(async (req, res) => {
+metrics.patch("/metrics/:id", requireRole("admin"), h(async (req, res) => {
   const actor = req.user!;
   const id = Number(req.params.id);
   const b = z.object(fields).omit({ formula_type: true }).partial().parse(req.body);

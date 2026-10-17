@@ -61,7 +61,7 @@ export default async function TeamPage({
         </div>
       </div>
 
-      {period.locked && <div className="banner note">This period is locked. Entries can't be changed.</div>}
+      {period.locked && <div className="banner note">This period is locked. Entries can&apos;t be changed.</div>}
       {!res.ok ? (
         <div className="banner error">{res.error}</div>
       ) : res.data.rows.length === 0 ? (

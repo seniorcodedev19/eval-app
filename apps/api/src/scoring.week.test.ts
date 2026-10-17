@@ -18,17 +18,17 @@ test("weekly score from daily sums", () => {
 
 test("day points are linear per day", () => {
   const daily = { 1: { "2026-10-12": 2 }, 2: { "2026-10-12": 4, "2026-10-14": 1 } };
-  const pts = dayPoints(metrics, daily, weekDays("2026-10-12"));
-  assert.deepEqual(pts, [14, 0, 1, 0, 0, 0, 0]);
+  const pts = dayPoints(metrics, daily, weekDays("2026-10-11"));
+  assert.deepEqual(pts, [0, 14, 0, 1, 0, 0, 0]);
 });
 
-test("week boundaries are Monday to Sunday", () => {
-  assert.equal(weekStartOf("2026-10-17"), "2026-10-12"); // Saturday
-  assert.equal(weekStartOf("2026-10-12"), "2026-10-12"); // Monday
-  assert.equal(weekStartOf("2026-10-18"), "2026-10-12"); // Sunday
-  assert.equal(weekStartOf("2026-10-19"), "2026-10-19");
+test("week boundaries are Sunday to Saturday", () => {
+  assert.equal(weekStartOf("2026-10-17"), "2026-10-11"); // Saturday
+  assert.equal(weekStartOf("2026-10-11"), "2026-10-11"); // Sunday
+  assert.equal(weekStartOf("2026-10-12"), "2026-10-11"); // Monday
+  assert.equal(weekStartOf("2026-10-18"), "2026-10-18"); // next Sunday
   assert.equal(addDays("2026-12-31", 1), "2027-01-01");
-  assert.equal(weekDays("2026-10-12")[6], "2026-10-18");
+  assert.equal(weekDays("2026-10-11")[6], "2026-10-17");
 });
 
 test("date validation", () => {

@@ -1,100 +1,85 @@
-import Link from "next/link";
-import ColumnChart from "@/components/ColumnChart";
-import ProgressList from "@/components/ProgressList";
-import ReviewQueue from "@/components/ReviewQueue";
+import Breakdown from "@/components/Breakdown";
+import LineChart from "@/components/LineChart";
+import RankBars from "@/components/RankBars";
 import StatusPill from "@/components/StatusPill";
-import TeamResults from "@/components/TeamResults";
-import TodayEntry from "@/components/TodayEntry";
+import WeekGrid from "@/components/WeekGrid";
+import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
-import { shortDay, weekLabel } from "@/lib/dates";
-import { fmt } from "@/lib/format";
-import type { QueueItem, TeamWeekRow, User, WeekData } from "@/lib/types";
+import { weekParam } from "@/lib/dates";
+import type { TeamWeekRow, User, WeekData } from "@/lib/types";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
+  const week = weekParam((await searchParams).week);
+  const wq = week ? `?week_start=${week}` : "";
   const me = await apiFetch<User>("/me");
   const manager = me.role !== "member";
-  const [week, team, queue] = await Promise.all([
-    tryFetch<WeekData>("/week"),
-    tryFetch<{ rows: TeamWeekRow[] }>("/team-week"),
-    manager ? tryFetch<QueueItem[]>("/review-queue") : null,
+
+  const [data, team] = await Promise.all([
+    tryFetch<WeekData>(`/week${wq}`),
+    tryFetch<{ rows: TeamWeekRow[] }>(`/team-week${wq}`),
   ]);
 
-  if (!week.ok) return <div className="banner error">{week.error}</div>;
-  const d = week.data;
-  const dayNo = d.days.indexOf(d.today) + 1;
+  if (!data.ok) return <div className="banner error">{data.error}</div>;
+  const d = data.data;
+  const rows = team.ok ? team.data.rows : [];
+  const lines = rows
+    .filter((r) => (r.day_points ?? []).some((v) => v > 0) || r.user_id === me.id)
+    .map((r) => ({
+      id: r.user_id,
+      name: r.name,
+      values: r.day_points?.length ? r.day_points : d.days.map(() => 0),
+    }));
 
   return (
     <>
       <div className="head">
         <div>
-          <h1>This week</h1>
+          <h1>Everyone&apos;s points</h1>
           <p className="sub" style={{ margin: 0 }}>
-            {weekLabel(d.week_start, d.week_end)}
-            {dayNo > 0 && ` · day ${dayNo} of 7`}
+            Daily points for the team this week. Your line is thicker.
           </p>
         </div>
-        <StatusPill status={d.status} />
+        <WeekPicker base="/dashboard" weekStart={d.week_start} weekEnd={d.week_end} today={d.today} />
+      </div>
+
+      <div className="panel">
+        {lines.length === 0 ? (
+          <div className="empty">No points to chart yet this week.</div>
+        ) : (
+          <LineChart days={d.days} series={lines} meId={me.id} label="Everyone's points each day this week" />
+        )}
+      </div>
+
+      <div className="head" style={{ marginTop: 32 }}>
+        <div className="row" style={{ alignItems: "center", margin: 0 }}>
+          <h2 style={{ margin: 0 }}>My week</h2>
+          <StatusPill status={d.status} />
+        </div>
+        {manager && (
+          <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
+            Download CSV
+          </a>
+        )}
       </div>
 
       {d.metrics.length === 0 ? (
         <div className="panel empty">
           <strong>No metrics to report on yet.</strong>
           <div>
-            {manager ? (
-              <>
-                Add some on the <Link href="/report">Report</Link> page.
-              </>
-            ) : (
-              "Your manager adds them. If you aren't on a team yet, ask an admin to add you."
-            )}
+            {me.role === "admin" ? "Add them under Admin." : "An admin adds the metrics your team reports on."}
           </div>
         </div>
       ) : (
         <>
-          <div className="panel">
-            <div className="score">
-              <span className="num">{fmt(d.score.total)}</span>
-              <span className="unit">points this week</span>
-            </div>
-            <div className="facts">
-              <span>
-                Achievement <b>{d.score.achievement_pct === null ? "n/a" : `${fmt(d.score.achievement_pct)}%`}</b>
-              </span>
-              <span>
-                Bonus <b>{fmt(d.score.bonus)}</b>
-              </span>
-            </div>
-            <ProgressList score={d.score} metrics={d.metrics} />
+          <WeekGrid key={d.week_start} data={d} />
+          <div style={{ marginTop: 16 }}>
+            <Breakdown score={d.score} />
           </div>
-
-          <h2>Points per day</h2>
-          <div className="panel">
-            <ColumnChart
-              label="Points earned each day this week"
-              items={d.days.map((day, i) => ({ label: shortDay(day), value: d.day_points[i], highlight: day === d.today }))}
-            />
-            <p className="muted" style={{ margin: "10px 0 0", fontSize: 13 }}>
-              Before the weekly cap on ratio metrics, so the bars can add up to a little more than the total.
-            </p>
-          </div>
-
-          <h2>Today</h2>
-          <TodayEntry key={d.week_start} today={d.today} metrics={d.metrics} daily={d.daily} editable={d.editable} />
-          <p className="muted" style={{ marginTop: 10 }}>
-            Need another day? Use the <Link href="/report">Report</Link> page.
-          </p>
         </>
       )}
 
-      {manager && (
-        <>
-          <h2>Waiting for your review</h2>
-          {queue?.ok ? <ReviewQueue items={queue.data} /> : <div className="banner error">{queue?.error}</div>}
-        </>
-      )}
-
-      <h2>Everyone&apos;s results</h2>
-      {team?.ok ? <TeamResults rows={team.data.rows} meId={me.id} /> : <div className="banner error">{team?.error}</div>}
+      <h2>Leaderboard</h2>
+      {team.ok ? <RankBars rows={rows} /> : <div className="banner error">{team.error}</div>}
     </>
   );
 }

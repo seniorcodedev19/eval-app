@@ -10,6 +10,8 @@
     "db:up": "docker compose up -d db",
     "db:migrate": "npm run migrate -w @eval/api",
     "db:seed": "npm run seed -w @eval/api",
+    "lint": "npm run lint -w @eval/api && npm run lint -w @eval/web",
+    "build": "npm run lint -w @eval/api && npm run build -w @eval/web",
     "test": "npm test -w @eval/api",
     "typecheck": "npm run typecheck -w @eval/api && npm run typecheck -w @eval/web"
   },
