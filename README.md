@@ -1,14 +1,31 @@
-# Eval: team performance evaluation
+# Eval: weekly team performance
 
-Next.js (web) + Express (API) + PostgreSQL, Google sign-in, admin page.
+Next.js (web) + Express (API) + PostgreSQL. Google sign-in. Landing page, then a signed-in app with
+tabs: Dashboard, Report, Time tracking, Interviews, Profile, Log out (plus Admin for admins).
 
 ```
 apps/web   Next.js 15 (App Router), Auth.js v5 (Google), proxies API calls
-apps/api   Express + pg, scoring engine, role checks, audit log
+apps/api   Express + pg, scoring, roles, audit log
 ```
 
-The browser only talks to Next.js. Next.js verifies the Google session, then calls the
-Express API with a short-lived signed token (`API_JWT_SECRET`). No CORS or cross-domain cookies.
+## How it works
+
+1. A **manager** creates metrics for their team (Report tab > Metrics): a name, a formula, a weight, a weekly target and a unit.
+2. Each **member** enters daily numbers (Dashboard "Today" box, or the week grid on the Report tab). Totals update as they type.
+3. At the weekend the member **submits** the week with an optional note.
+4. The **manager reviews**: approve (optionally adding bonus points) or return with a comment. Approving stores the final score; the week is then locked.
+5. Everyone sees the current week's progress on the Dashboard. Managers also see the team bar chart (orderable by points, achievement or name) and a review queue.
+
+Scoring (per week):
+```
+ratio metric: min(done / weekly target, cap) * weight      done = sum of the daily values
+count metric: done * weight
+total = sum of metrics + manager bonus
+```
+Logic: `apps/api/src/scoring.ts` (tests: `npm test`).
+
+Roles: **member** (own data), **manager** (their team: metrics, reviews, interviews, team views), **admin** (everything, plus people and teams).
+Nobody can approve their own report; an admin reviews managers' weeks.
 
 ## Run locally
 
@@ -20,38 +37,30 @@ cp apps/api/.env.example apps/api/.env          # set ADMIN_EMAILS to your email
 cp apps/web/.env.example apps/web/.env.local    # set AUTH_SECRET and API_JWT_SECRET
 npm run db:up
 npm run db:migrate
-npm run db:seed        # sample team, metrics and a 2026-Q4 period
+npm run db:seed        # one team and four starter metrics
 npm run dev            # web on :3000, API on :4000
 ```
 
 `API_JWT_SECRET` must be identical in both env files. `AUTH_SECRET`: `openssl rand -base64 32`.
 
-Open http://localhost:3000. With `AUTH_DEV_LOGIN=true` (local only) you can sign in with any email
-without Google. Use the email you put in `ADMIN_EMAILS` to become admin, then:
+Open http://localhost:3000. With `AUTH_DEV_LOGIN=true` (local only) the login page has an email-only form, so you
+can try roles without Google: sign in as your `ADMIN_EMAILS` address, then in another browser profile as
+`manager@example.com` and `member@example.com`, and set their roles and team under Admin.
 
-1. Admin > People: set roles and teams (people appear after their first sign-in).
-2. Team > open a person > Enter results.
-3. Admin > Review periods > Lock to freeze scores.
+Already ran the first version? `npm run db:migrate` applies `002_weekly.sql`, which replaces the old
+quarterly tables (old entries and periods are dropped).
 
 ### Google sign-in
-Google Cloud Console > Credentials > OAuth client (Web). Authorized redirect URI:
+Google Cloud Console > Credentials > OAuth client (Web). Redirect URI:
 `http://localhost:3000/api/auth/callback/google`. Put the id and secret in `apps/web/.env.local`.
-Set `ALLOWED_EMAIL_DOMAIN` to restrict sign-in to your company.
+Leave `ALLOWED_EMAIL_DOMAIN` empty to allow any Gmail account, or set it (e.g. `yourco.com`) to restrict sign-in.
+New people start as members with no team; an admin assigns a team and role.
 
-## Scoring
-
-```
-ratio metric: min(done / planned, cap) * weight + bonus
-count metric: done * weight + bonus
-total = sum over metrics
-```
-A ratio metric with planned = 0 is "n/a" (only its bonus counts). Achievement % is the weighted
-average of ratio metrics. Logic: `apps/api/src/scoring.ts`, tests: `npm test`.
-
-## Roles
-- member: sees own score
-- manager: sees and edits people in their team
-- admin: everything, plus users, teams, metrics, periods, audit log
+## Notes and choices
+- Weeks run Monday to Sunday, dates in UTC.
+- "Interviews" are 1:1 review meetings a manager schedules with a team member, with notes both can read.
+- Members see their own progress; only managers and admins see the team chart.
+- Entries lock when the week is submitted; a returned week can be edited and resubmitted.
 
 ## Deploy to Vercel
 Two Vercel projects from this repo:
@@ -61,8 +70,7 @@ Two Vercel projects from this repo:
 | web | `apps/web` |
 | api | `apps/api` (zero-config Express, entry `src/index.ts`) |
 
-Database: Neon via the Vercel Marketplace (pooled `DATABASE_URL`), then run
-`npm run db:migrate` once with that URL.
+Database: Neon via the Vercel Marketplace (pooled `DATABASE_URL`); run `npm run db:migrate` once with that URL.
 
 Env vars
 - web: `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `API_URL` (the api project's URL), `API_JWT_SECRET`, optional `ALLOWED_EMAIL_DOMAIN`. Leave `AUTH_DEV_LOGIN` unset.

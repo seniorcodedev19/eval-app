@@ -104,3 +104,29 @@ export function computeScore(metrics: MetricDef[], entries: EntryRow[]): Score {
     breakdown,
   };
 }
+
+// ---------- weekly helpers ----------
+
+export interface WeeklyMetric extends MetricDef {
+  target: number;
+  unit: string;
+}
+
+// metric id -> date -> value
+export type DailyMap = Record<number, Record<string, number>>;
+
+export const sumDaily = (d: Record<string, number> | undefined) =>
+  d ? Object.values(d).reduce((s, v) => s + v, 0) : 0;
+
+// Points earned on each day, before the weekly cap. Used for the day-by-day chart.
+export function dayPoints(metrics: WeeklyMetric[], daily: DailyMap, days: string[]): number[] {
+  return days.map((day) =>
+    r2(
+      metrics.reduce((sum, m) => {
+        const v = daily[m.id]?.[day] ?? 0;
+        if (m.formula_type === "ratio") return sum + (m.target > 0 ? (v / m.target) * m.weight : 0);
+        return sum + v * m.weight;
+      }, 0),
+    ),
+  );
+}

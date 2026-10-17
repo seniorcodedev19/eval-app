@@ -1,7 +1,9 @@
 import { auth } from "@/auth";
 
+const PUBLIC = new Set(["/", "/login"]);
+
 export default auth((req) => {
-  if (!req.auth && req.nextUrl.pathname !== "/login") {
+  if (!req.auth && !PUBLIC.has(req.nextUrl.pathname)) {
     return Response.redirect(new URL("/login", req.nextUrl.origin));
   }
 });

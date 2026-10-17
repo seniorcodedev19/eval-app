@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  if ((await auth())?.user) redirect("/");
+  if ((await auth())?.user) redirect("/dashboard");
   const sp = await searchParams;
   const devLogin = process.env.AUTH_DEV_LOGIN === "true" && process.env.NODE_ENV !== "production";
 
@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <form
         action={async () => {
           "use server";
-          await signIn("google", { redirectTo: "/" });
+          await signIn("google", { redirectTo: "/dashboard" });
         }}
       >
         <button className="btn" type="submit">
@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <form
           action={async (formData: FormData) => {
             "use server";
-            await signIn("credentials", { email: String(formData.get("email") ?? ""), redirectTo: "/" });
+            await signIn("credentials", { email: String(formData.get("email") ?? ""), redirectTo: "/dashboard" });
           }}
         >
           <label htmlFor="email">Local development only: sign in by email</label>

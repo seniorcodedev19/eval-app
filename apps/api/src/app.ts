@@ -1,8 +1,11 @@
 import cors from "cors";
 import express from "express";
 import { authenticate } from "./auth";
-import { admin } from "./routes/admin";
-import { data } from "./routes/data";
+import { core } from "./routes/core";
+import { interviews } from "./routes/interviews";
+import { metrics } from "./routes/metrics";
+import { time } from "./routes/time";
+import { week } from "./routes/week";
 import { errorHandler } from "./util";
 
 const app = express();
@@ -15,8 +18,11 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(authenticate);
-app.use(data);
-app.use(admin);
+app.use(core);
+app.use(metrics);
+app.use(week);
+app.use(time);
+app.use(interviews);
 app.use(errorHandler);
 
 export default app;

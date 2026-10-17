@@ -7,8 +7,8 @@ export default function Breakdown({ score }: { score: Score }) {
   if (score.breakdown.length === 0) {
     return (
       <div className="panel empty">
-        <strong>No results recorded for this period yet.</strong>
-        <div>A manager adds planned and done values for each metric.</div>
+        <strong>No results entered for this week yet.</strong>
+        <div>Enter your numbers for each day on the Report tab.</div>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function Breakdown({ score }: { score: Score }) {
           <thead>
             <tr>
               <th>Metric</th>
-              <th className="n">Planned</th>
+              <th className="n">Target</th>
               <th className="n">Done</th>
               <th className="n">Ratio</th>
               <th className="n">Weight</th>

@@ -1,48 +1,85 @@
-import Breakdown from "@/components/Breakdown";
-import PeriodPicker from "@/components/PeriodPicker";
-import Trend from "@/components/Trend";
-import { apiFetch, tryFetch } from "@/lib/api";
-import type { Period, ScoreResponse, TrendPoint, User } from "@/lib/types";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth, signIn } from "@/auth";
+import ColumnChart from "@/components/ColumnChart";
 
-export default async function Dashboard({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
-  const sp = await searchParams;
-  const [me, periods] = await Promise.all([apiFetch<User>("/me"), apiFetch<Period[]>("/periods")]);
+const sample = [
+  { label: "Mon", value: 14 },
+  { label: "Tue", value: 21 },
+  { label: "Wed", value: 11 },
+  { label: "Thu", value: 24, highlight: true },
+  { label: "Fri", value: 18 },
+  { label: "Sat", value: 0 },
+  { label: "Sun", value: 0 },
+];
 
-  if (periods.length === 0) {
-    return (
-      <>
-        <h1>My score</h1>
-        <div className="panel empty">
-          <strong>No periods yet.</strong>
-          <div>{me.role === "admin" ? "Create one under Admin." : "An admin needs to create a review period."}</div>
-        </div>
-      </>
-    );
-  }
-
-  const period = periods.find((p) => p.id === Number(sp.period)) ?? periods[0];
-  const [score, trend] = await Promise.all([
-    tryFetch<ScoreResponse>(`/scores?user_id=${me.id}&period_id=${period.id}`),
-    tryFetch<TrendPoint[]>(`/trend?user_id=${me.id}`),
-  ]);
+export default async function Landing() {
+  if ((await auth())?.user) redirect("/dashboard");
 
   return (
     <>
-      <div className="head">
-        <div>
-          <h1>My score</h1>
-          <p className="sub" style={{ margin: 0 }}>
-            {me.name || me.email}
-          </p>
+      <header className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <strong style={{ fontSize: 17 }}>Eval</strong>
+        <Link className="btn secondary" href="/login">
+          Sign in
+        </Link>
+      </header>
+
+      <section className="hero">
+        <p className="eyebrow">Weekly team reviews</p>
+        <h1 className="display">
+          Log the day.
+          <br />
+          Review the week.
+        </h1>
+        <p className="lead">
+          Everyone enters a few numbers each day. Totals build up on their own, and at the weekend your manager reviews and approves the week.
+        </p>
+        <form
+          action={async () => {
+            "use server";
+            await signIn("google", { redirectTo: "/dashboard" });
+          }}
+        >
+          <button className="btn big" type="submit">
+            Continue with Google
+          </button>
+        </form>
+      </section>
+
+      <section className="panel" aria-label="Example week">
+        <div className="head" style={{ marginBottom: 8 }}>
+          <div>
+            <strong>Example week</strong>
+            <div className="muted">Points earned each day</div>
+          </div>
+          <div className="score">
+            <span className="num" style={{ fontSize: 36 }}>
+              88
+            </span>
+            <span className="unit">points so far</span>
+          </div>
         </div>
-        <PeriodPicker periods={periods} value={period.id} />
-      </div>
+        <ColumnChart items={sample} unit="" label="Example of points earned per day" />
+      </section>
 
-      {period.locked && <div className="banner note">This period is locked. These are the final scores.</div>}
-      {score.ok ? <Breakdown score={score.data.score} /> : <div className="banner error">{score.error}</div>}
-
-      <h2>Trend</h2>
-      {trend.ok ? <Trend points={trend.data} /> : <div className="banner error">{trend.error}</div>}
+      <section className="steps">
+        <div>
+          <div className="n">1</div>
+          <h3>Enter your numbers daily</h3>
+          <p>Your manager sets the metrics. You fill in what you did, in a few seconds.</p>
+        </div>
+        <div>
+          <div className="n">2</div>
+          <h3>Submit at the weekend</h3>
+          <p>Your total is already worked out. Add a note and send the week for review.</p>
+        </div>
+        <div>
+          <div className="n">3</div>
+          <h3>Your manager approves</h3>
+          <p>They approve it or send it back with a comment, and the final score is locked in.</p>
+        </div>
+      </section>
     </>
   );
 }

@@ -2,19 +2,16 @@ import { pool } from "./db";
 
 async function main() {
   await pool.query("insert into teams (name) values ('Engineering') on conflict do nothing");
+  // Global metrics (team_id null) apply to every team. Managers add their own per team in the app.
   await pool.query(
-    `insert into metrics (key, name, formula_type, weight, cap) values
-       ('tasks_delivered', 'Tasks delivered vs planned', 'ratio', 50, 1.2),
-       ('sprint_commitments', 'Sprint commitments kept', 'ratio', 30, 1.2),
-       ('code_reviews', 'Code reviews completed', 'count', 0.5, 1.2),
-       ('knowledge_sharing', 'Talks and docs shared', 'count', 2, 1.2)
+    `insert into metrics (key, name, formula_type, weight, cap, target, unit) values
+       ('tasks_completed', 'Tasks completed', 'ratio', 50, 1.2, 10, 'tasks'),
+       ('code_reviews', 'Code reviews', 'ratio', 30, 1.2, 5, 'reviews'),
+       ('bugs_fixed', 'Bugs fixed', 'count', 1, 1.2, 0, 'bugs'),
+       ('docs_shared', 'Docs or talks shared', 'count', 2, 1.2, 0, 'items')
      on conflict (key) do nothing`,
   );
-  await pool.query(
-    `insert into periods (label, start_date, end_date) values ('2026-Q4', '2026-10-01', '2026-12-31')
-     on conflict (label) do nothing`,
-  );
-  console.log("seeded teams, metrics, and a period");
+  console.log("seeded a team and four starter metrics");
   await pool.end();
 }
 
