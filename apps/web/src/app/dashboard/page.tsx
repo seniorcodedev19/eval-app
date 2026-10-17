@@ -1,5 +1,5 @@
 import Breakdown from "@/components/Breakdown";
-import LineChart from "@/components/LineChart";
+import ColumnChart, { type Col } from "@/components/ColumnChart";
 import RankBars from "@/components/RankBars";
 import StatusPill from "@/components/StatusPill";
 import WeekGrid from "@/components/WeekGrid";
@@ -7,6 +7,11 @@ import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { weekParam } from "@/lib/dates";
 import type { TeamWeekRow, User, WeekData } from "@/lib/types";
+
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts[0] || name;
+}
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const week = weekParam((await searchParams).week);
@@ -22,13 +27,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (!data.ok) return <div className="banner error">{data.error}</div>;
   const d = data.data;
   const rows = team.ok ? team.data.rows : [];
-  const lines = rows
-    .filter((r) => (r.day_points ?? []).some((v) => v > 0) || r.user_id === me.id)
-    .map((r) => ({
-      id: r.user_id,
-      name: r.name,
-      values: r.day_points?.length ? r.day_points : d.days.map(() => 0),
-    }));
+  const bars: Col[] = rows.map((r) => ({
+    label: shortName(r.name),
+    value: r.total,
+    highlight: r.user_id === me.id,
+    tone: r.status === "approved" ? "ok" : r.status === "submitted" ? "wait" : "muted",
+  }));
 
   return (
     <>
@@ -36,17 +40,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div>
           <h1>Everyone&apos;s points</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Daily points for the team this week. Your line is thicker.
+            Points this week for each person. Your bar is outlined.
           </p>
         </div>
         <WeekPicker base="/dashboard" weekStart={d.week_start} weekEnd={d.week_end} today={d.today} />
       </div>
 
       <div className="panel">
-        {lines.length === 0 ? (
-          <div className="empty">No points to chart yet this week.</div>
+        {!team.ok ? (
+          <div className="banner error">{team.error}</div>
+        ) : bars.length === 0 ? (
+          <div className="empty">No people to chart yet this week.</div>
         ) : (
-          <LineChart days={d.days} series={lines} meId={me.id} label="Everyone's points each day this week" />
+          <ColumnChart className="people" items={bars} label="Everyone's points this week" />
         )}
       </div>
 

@@ -43,6 +43,7 @@ week.get("/week", h(async (req, res) => {
     days: snap.days,
     daily: snap.daily,
     day_points: snap.day_points,
+    time_hours: snap.time_hours,
     score: snap.score,
   });
 }));
@@ -63,11 +64,14 @@ week.put("/daily", h(async (req, res) => {
   if (report && (report.status === "submitted" || report.status === "approved")) {
     throw new HttpError(400, `This week is ${report.status}, so entries are locked`);
   }
-  const m = await pool.query(
-    "select id from metrics where id=$1 and active and (team_id is null or team_id = $2)",
+  const m = await pool.query<{ id: number; formula_type: string }>(
+    "select id, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
     [b.metric_id, actor.team_id],
   );
   if (!m.rows[0]) throw new HttpError(404, "Metric not found");
+  if (m.rows[0].formula_type === "overtime") {
+    throw new HttpError(400, "Working time comes from Time tracking, not this form");
+  }
 
   if (!b.value) {
     await pool.query("delete from daily_entries where user_id=$1 and metric_id=$2 and entry_date=$3", [
@@ -85,6 +89,45 @@ week.put("/daily", h(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// One weekly total per metric (not overtime — those hours come from time_logs).
+week.put("/weekly", h(async (req, res) => {
+  const actor = req.user!;
+  const b = z
+    .object({
+      week_start: dateStr,
+      entries: z.array(z.object({ metric_id: z.number().int(), value: z.number().min(0).max(1_000_000).nullable() })),
+    })
+    .parse(req.body);
+  const ws = weekStartOf(b.week_start);
+  if (ws > todayUtc()) throw new HttpError(400, "That week hasn't started yet");
+  const report = await getReport(actor.id, ws);
+  if (report && (report.status === "submitted" || report.status === "approved")) {
+    throw new HttpError(400, `This week is ${report.status}, so entries are locked`);
+  }
+
+  for (const e of b.entries) {
+    const m = await pool.query<{ id: number; formula_type: string }>(
+      "select id, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
+      [e.metric_id, actor.team_id],
+    );
+    if (!m.rows[0]) throw new HttpError(404, "Metric not found");
+    if (m.rows[0].formula_type === "overtime") continue;
+
+    await pool.query(
+      "delete from daily_entries where user_id=$1 and metric_id=$2 and entry_date between $3 and $4",
+      [actor.id, e.metric_id, ws, addDays(ws, 6)],
+    );
+    if (e.value) {
+      await pool.query(
+        `insert into daily_entries (user_id, metric_id, entry_date, value) values ($1,$2,$3,$4)
+         on conflict (user_id, metric_id, entry_date) do update set value = excluded.value, updated_at = now()`,
+        [actor.id, e.metric_id, ws, e.value],
+      );
+    }
+  }
+  res.json({ ok: true });
+}));
+
 week.post("/report/submit", h(async (req, res) => {
   const actor = req.user!;
   const b = z.object({ week_start: dateStr, summary: z.string().trim().max(2000).optional() }).parse(req.body);
@@ -95,11 +138,8 @@ week.post("/report/submit", h(async (req, res) => {
   if (existing && (existing.status === "submitted" || existing.status === "approved")) {
     throw new HttpError(400, `This week is already ${existing.status}`);
   }
-  const days = await pool.query(
-    "select count(*)::int as n from daily_entries where user_id=$1 and entry_date between $2 and $3",
-    [actor.id, ws, addDays(ws, 6)],
-  );
-  if (days.rows[0].n === 0) throw new HttpError(400, "Add at least one result before submitting");
+  const snap = await weekSnapshot(actor, ws);
+  if (!snap.hasData) throw new HttpError(400, "Add at least one result or some tracked time before submitting");
 
   await pool.query(
     `insert into weekly_reports (user_id, week_start, status, summary, submitted_at)
@@ -193,6 +233,7 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
       email: u.email,
       role: u.role,
       status,
+      report_id: s.report?.id ?? null,
       has_data: hideOthers ? false : s.hasData,
       total: hideOthers ? 0 : s.score.total,
       bonus: hideOthers ? 0 : s.score.bonus,

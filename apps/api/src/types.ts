@@ -7,6 +7,7 @@ export interface User {
   role: Role;
   team_id: number | null;
   active: boolean;
+  avatar?: string | null;
 }
 
 declare global {

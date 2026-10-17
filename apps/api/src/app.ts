@@ -11,7 +11,7 @@ import { errorHandler } from "./util";
 
 const app = express();
 
-app.use(express.json({ limit: "100kb" }));
+app.use(express.json({ limit: "400kb" }));
 app.use(cors({ origin: process.env.WEB_ORIGIN, credentials: true }));
 
 app.get("/health", (_req, res) => {

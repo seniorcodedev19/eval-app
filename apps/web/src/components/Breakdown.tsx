@@ -59,14 +59,20 @@ export default function Breakdown({ score }: { score: Score }) {
           </thead>
           <tbody>
             {score.breakdown.map((b, i) => (
-              <tr key={b.metric_id}>
+              <tr key={b.key}>
                 <td>
                   <span className={`dot seg-${i % 6}`} />
                   {b.name}
                 </td>
-                <td className="n">{b.formula_type === "ratio" ? fmt(b.planned) : "–"}</td>
+                <td className="n">{b.formula_type === "count" || b.part === "bonus" ? "–" : fmt(b.planned)}</td>
                 <td className="n">{fmt(b.done)}</td>
-                <td className="n">{b.formula_type === "ratio" ? (b.na ? "n/a" : `${fmt((b.ratio ?? 0) * 100)}%`) : "–"}</td>
+                <td className="n">
+                  {b.formula_type === "count" || b.part === "bonus"
+                    ? "–"
+                    : b.na
+                      ? "n/a"
+                      : `${fmt((b.ratio ?? 0) * 100)}%`}
+                </td>
                 <td className="n">{fmt(b.weight)}</td>
                 <td className="n">{fmt(b.bonus)}</td>
                 <td className="n">

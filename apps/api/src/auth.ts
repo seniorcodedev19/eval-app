@@ -32,7 +32,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
        on conflict (email) do update set
          name = coalesce(nullif(excluded.name, ''), users.name),
          role = case when $4::boolean then 'admin' else users.role end
-       returning id, email, name, role, team_id, active`,
+       returning id, email, name, role, team_id, active, avatar`,
       [email, name, isAdmin ? "admin" : "member", isAdmin],
     );
     const user = rows[0];

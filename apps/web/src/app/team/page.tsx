@@ -1,34 +1,34 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import PeriodPicker from "@/components/PeriodPicker";
+import ApproveWeekButton from "@/components/ApproveWeekButton";
+import StatusPill from "@/components/StatusPill";
+import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
-import type { Period, Team, TeamRow, User } from "@/lib/types";
-
-const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+import { todayUtc, weekParam } from "@/lib/dates";
+import { fmt } from "@/lib/format";
+import type { Team, TeamWeekRow, User } from "@/lib/types";
 
 export default async function TeamPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; team?: string }>;
+  searchParams: Promise<{ week?: string; team?: string }>;
 }) {
   const sp = await searchParams;
-  const [me, periods] = await Promise.all([apiFetch<User>("/me"), apiFetch<Period[]>("/periods")]);
-  if (me.role === "member") redirect("/");
+  const week = weekParam(sp.week);
+  const me = await apiFetch<User>("/me");
+  if (me.role === "member") redirect("/dashboard");
 
-  if (periods.length === 0) {
-    return (
-      <>
-        <h1>Team</h1>
-        <div className="panel empty">No periods yet. An admin can create one under Admin.</div>
-      </>
-    );
-  }
-
-  const period = periods.find((p) => p.id === Number(sp.period)) ?? periods[0];
   const teams = me.role === "admin" ? await apiFetch<Team[]>("/teams") : [];
   const teamId = me.role === "admin" && sp.team ? Number(sp.team) : undefined;
-  const qs = `period_id=${period.id}${teamId ? `&team_id=${teamId}` : ""}`;
-  const res = await tryFetch<{ period: Period; rows: TeamRow[] }>(`/team-scores?${qs}`);
+  const qs = [week ? `week_start=${week}` : "", teamId ? `team_id=${teamId}` : ""].filter(Boolean).join("&");
+  const res = await tryFetch<{ week_start: string; week_end: string; rows: TeamWeekRow[] }>(
+    `/team-week${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) return <div className="banner error">{res.error}</div>;
+
+  const extra: Record<string, string> = {};
+  if (sp.team) extra.team = sp.team;
 
   return (
     <>
@@ -36,13 +36,13 @@ export default async function TeamPage({
         <div>
           <h1>Team</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Scores per person for one period. Open a person to see the breakdown and enter results.
+            Weekly points from results and tracked time (Sunday to Saturday). Open a person for the form, breakdown, and trend.
           </p>
         </div>
         <div className="row">
           {me.role === "admin" && (
             <form>
-              <input type="hidden" name="period" value={period.id} />
+              {week && <input type="hidden" name="week" value={week} />}
               <label htmlFor="team">Team</label>
               <select id="team" name="team" defaultValue={sp.team ?? ""}>
                 <option value="">All teams</option>
@@ -57,14 +57,17 @@ export default async function TeamPage({
               </button>
             </form>
           )}
-          <PeriodPicker periods={periods} value={period.id} />
+          <WeekPicker
+            base="/team"
+            weekStart={res.data.week_start}
+            weekEnd={res.data.week_end}
+            today={todayUtc()}
+            extra={extra}
+          />
         </div>
       </div>
 
-      {period.locked && <div className="banner note">This period is locked. Entries can&apos;t be changed.</div>}
-      {!res.ok ? (
-        <div className="banner error">{res.error}</div>
-      ) : res.data.rows.length === 0 ? (
+      {res.data.rows.length === 0 ? (
         <div className="panel empty">No active people in this team yet.</div>
       ) : (
         <div className="panel tablewrap">
@@ -73,22 +76,29 @@ export default async function TeamPage({
               <tr>
                 <th>Person</th>
                 <th>Role</th>
+                <th>Status</th>
                 <th className="n">Achievement</th>
                 <th className="n">Bonus</th>
                 <th className="n">Points</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {res.data.rows.map((r) => (
                 <tr key={r.user_id}>
                   <td>
-                    <Link href={`/team/${r.user_id}?period=${period.id}`}>{r.name}</Link>
+                    <Link href={`/team/${r.user_id}?week=${res.data.week_start}`}>
+                      {r.name}
+                    </Link>
                     <div className="muted" style={{ fontSize: 13 }}>
                       {r.email}
                     </div>
                   </td>
                   <td>
                     <span className="pill">{r.role}</span>
+                  </td>
+                  <td>
+                    <StatusPill status={r.status} />
                   </td>
                   {r.has_data ? (
                     <>
@@ -103,6 +113,11 @@ export default async function TeamPage({
                       No results yet
                     </td>
                   )}
+                  <td>
+                    {r.status === "submitted" && r.report_id && r.user_id !== me.id ? (
+                      <ApproveWeekButton reportId={r.report_id} />
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -111,7 +126,7 @@ export default async function TeamPage({
       )}
 
       <p style={{ marginTop: 16 }}>
-        <a className="btn secondary" href={`/api/proxy/export.csv?${qs}`}>
+        <a className="btn secondary" href={`/api/proxy/export.csv?${qs || `week_start=${res.data.week_start}`}`}>
           Download CSV
         </a>
       </p>

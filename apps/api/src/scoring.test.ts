@@ -45,3 +45,32 @@ test("no entries gives a zero score", () => {
   assert.equal(s.total, 0);
   assert.equal(s.breakdown.length, 0);
 });
+
+const overtime: MetricDef = {
+  id: 3,
+  key: "hours",
+  name: "Tracked time",
+  formula_type: "overtime",
+  weight: 90,
+  cap: 1,
+  overtime_rate: 1,
+};
+
+test("overtime: hours at the target are base; extra hours are bonus", () => {
+  const s = computeScore([overtime], [{ metric_id: 3, planned: 90, done: 95, bonus: 0 }]);
+  assert.equal(s.base, 90); // 90/90 * 90
+  assert.equal(s.bonus, 5); // 5 * 1
+  assert.equal(s.total, 95);
+  assert.equal(s.breakdown.length, 2);
+  assert.equal(s.breakdown[0].part, "base");
+  assert.equal(s.breakdown[1].part, "bonus");
+  assert.equal(s.achievement_pct, 100);
+});
+
+test("overtime under the target has no bonus node points", () => {
+  const s = computeScore([overtime], [{ metric_id: 3, planned: 90, done: 80, bonus: 0 }]);
+  assert.equal(s.base, 80); // 80/90 * 90
+  assert.equal(s.bonus, 0);
+  assert.equal(s.total, 80);
+  assert.equal(s.achievement_pct, 88.89);
+});

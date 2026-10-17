@@ -66,8 +66,8 @@ export default async function Landing() {
       <section className="steps">
         <div>
           <div className="n">1</div>
-          <h3>Enter your numbers daily</h3>
-          <p>Your manager sets the metrics. You fill in what you did, in a few seconds.</p>
+          <h3>Log time and weekly results</h3>
+          <p>Hours come from Time tracking. Other metrics are one total for the week.</p>
         </div>
         <div>
           <div className="n">2</div>

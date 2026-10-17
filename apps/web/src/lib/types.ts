@@ -9,6 +9,7 @@ export interface User {
   team_id: number | null;
   active: boolean;
   job_title?: string;
+  avatar?: string | null;
 }
 export interface Team {
   id: number;
@@ -29,14 +30,16 @@ export interface Entry {
   note: string | null;
   updated_at?: string;
 }
+export type FormulaType = "ratio" | "count" | "overtime";
 export interface Metric {
   id: number;
   key: string;
   name: string;
-  formula_type: "ratio" | "count";
+  formula_type: FormulaType;
   weight: number;
   cap: number;
   target: number;
+  overtime_rate: number;
   unit: string;
   team_id: number | null;
   team_name?: string | null;
@@ -46,7 +49,7 @@ export interface MetricScore {
   metric_id: number;
   key: string;
   name: string;
-  formula_type: "ratio" | "count";
+  formula_type: FormulaType;
   weight: number;
   planned: number;
   done: number;
@@ -55,6 +58,7 @@ export interface MetricScore {
   base: number;
   contribution: number;
   na: boolean;
+  part?: "base" | "bonus";
 }
 export interface Score {
   total: number;
@@ -62,28 +66,6 @@ export interface Score {
   bonus: number;
   achievement_pct: number | null;
   breakdown: MetricScore[];
-}
-export interface ScoreResponse {
-  user: User;
-  period: Period;
-  score: Score;
-}
-export interface TrendPoint {
-  period_id: number;
-  label: string;
-  total: number;
-  achievement_pct: number | null;
-}
-export interface TeamRow {
-  user_id: number;
-  name: string;
-  email: string;
-  team_id: number | null;
-  role: Role;
-  has_data: boolean;
-  total: number;
-  bonus: number;
-  achievement_pct: number | null;
 }
 export interface WeekReport {
   status: Status;
@@ -105,6 +87,7 @@ export interface WeekData {
   days: string[];
   daily: Record<number, Record<string, number>>;
   day_points: number[];
+  time_hours: number;
   score: Score;
 }
 export interface TeamWeekRow {
@@ -113,6 +96,7 @@ export interface TeamWeekRow {
   email: string;
   role: Role;
   status: Status;
+  report_id: number | null;
   has_data: boolean;
   total: number;
   bonus: number;
@@ -173,6 +157,7 @@ export interface Profile {
   team_name: string | null;
   job_title: string;
   bio: string;
+  avatar: string | null;
 }
 export interface AuditRow {
   id: number;

@@ -2,9 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import { canView, requireRole } from "../auth";
 import { pool } from "../db";
-import { addDays, parseWeek, todayUtc, weekDays } from "../dates";
+import { addDays, isoDate, parseWeek, todayUtc, weekDays, weekStartOf } from "../dates";
 import type { User } from "../types";
 import { dateStr, h, HttpError } from "../util";
+import { getReport } from "../week";
 
 export const time = Router();
 
@@ -49,6 +50,10 @@ time.post("/time", h(async (req, res) => {
     })
     .parse(req.body);
   if (b.log_date > addDays(todayUtc(), 1)) throw new HttpError(400, "You can't log time for a future day");
+  const report = await getReport(req.user!.id, weekStartOf(b.log_date));
+  if (report && (report.status === "submitted" || report.status === "approved")) {
+    throw new HttpError(400, `This week is ${report.status}, so time logs are locked`);
+  }
   const { rows } = await pool.query(
     "insert into time_logs (user_id, log_date, minutes, task, note) values ($1,$2,$3,$4,$5) returning id, log_date, minutes, task, note",
     [req.user!.id, b.log_date, b.minutes, b.task, b.note ?? null],
@@ -57,11 +62,18 @@ time.post("/time", h(async (req, res) => {
 }));
 
 time.delete("/time/:id", h(async (req, res) => {
-  const { rowCount } = await pool.query("delete from time_logs where id=$1 and user_id=$2", [
-    Number(req.params.id),
-    req.user!.id,
-  ]);
-  if (!rowCount) throw new HttpError(404, "Entry not found");
+  const found = await pool.query<{ log_date: string | Date }>(
+    "select log_date from time_logs where id=$1 and user_id=$2",
+    [Number(req.params.id), req.user!.id],
+  );
+  if (!found.rows[0]) throw new HttpError(404, "Entry not found");
+  const raw = found.rows[0].log_date;
+  const day = raw instanceof Date ? isoDate(raw) : String(raw).slice(0, 10);
+  const report = await getReport(req.user!.id, weekStartOf(day));
+  if (report && (report.status === "submitted" || report.status === "approved")) {
+    throw new HttpError(400, `This week is ${report.status}, so time logs are locked`);
+  }
+  await pool.query("delete from time_logs where id=$1 and user_id=$2", [Number(req.params.id), req.user!.id]);
   res.json({ ok: true });
 }));
 

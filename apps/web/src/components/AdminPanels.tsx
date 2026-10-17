@@ -22,7 +22,7 @@ function Users({ me, users, teams }: { me: User; users: User[]; teams: Team[] })
               <th>Person</th>
               <th>Role</th>
               <th>Team</th>
-              <th>Active</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -56,13 +56,15 @@ function Users({ me, users, teams }: { me: User; users: User[]; teams: Team[] })
                   </select>
                 </td>
                 <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`${u.email} is active`}
-                    defaultChecked={u.active}
-                    disabled={u.id === me.id}
-                    onChange={(e) => run("PATCH", `/users/${u.id}`, { active: e.target.checked })}
-                  />
+                  {u.id === me.id ? null : u.active ? (
+                    <button className="btn secondary" type="button" onClick={() => run("PATCH", `/users/${u.id}`, { active: false })}>
+                      Deactivate
+                    </button>
+                  ) : (
+                    <button className="btn" type="button" onClick={() => run("PATCH", `/users/${u.id}`, { active: true })}>
+                      Approve
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -1,51 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { call, useAction } from "@/lib/client";
-import { addDays, dayMonth, shortDay } from "@/lib/dates";
+import Link from "next/link";
+import { useState } from "react";
+import { useAction } from "@/lib/client";
 import { fmt } from "@/lib/format";
-import type { WeekData } from "@/lib/types";
+import type { Metric, WeekData } from "@/lib/types";
 
-const k = (metricId: number, day: string) => `${metricId}|${day}`;
+function weekTotal(data: WeekData, m: Metric) {
+  if (m.formula_type === "overtime") return data.time_hours ?? 0;
+  return Object.values(data.daily[m.id] ?? {}).reduce((s, v) => s + Number(v), 0);
+}
 
-// Daily input for the whole week. Each cell saves when you leave it.
+// One weekly value per metric. Overtime hours come from Time tracking.
 export default function WeekGrid({ data }: { data: WeekData }) {
-  const router = useRouter();
-  const initial = () => {
-    const o: Record<string, string> = {};
-    for (const m of data.metrics)
-      for (const d of data.days) {
-        const v = data.daily[m.id]?.[d];
-        o[k(m.id, d)] = v === undefined ? "" : String(v);
-      }
-    return o;
-  };
-  const [vals, setVals] = useState(initial);
-  const saved = useRef<Record<string, string>>(initial());
-  const [msg, setMsg] = useState<string | null>(null);
-  const [summary, setSummary] = useState(data.report?.summary ?? "");
+  const save = useAction();
   const submit = useAction();
-
-  const lastDay = addDays(data.today, 1);
-
-  async function save(metricId: number, day: string) {
-    const key = k(metricId, day);
-    if (vals[key] === saved.current[key]) return;
-    const n = vals[key].trim() === "" ? null : Number(vals[key]);
-    if (n !== null && (Number.isNaN(n) || n < 0)) {
-      setMsg("Enter a number of 0 or more.");
-      return;
-    }
-    const r = await call("PUT", "/daily", { metric_id: metricId, entry_date: day, value: n });
-    if (!r.ok) {
-      setMsg(r.error);
-      return;
-    }
-    saved.current[key] = vals[key];
-    setMsg(null);
-    router.refresh();
-  }
+  const [vals, setVals] = useState<Record<number, string>>(() =>
+    Object.fromEntries(data.metrics.filter((m) => m.formula_type !== "overtime").map((m) => [m.id, String(weekTotal(data, m) || "")])),
+  );
+  const [summary, setSummary] = useState(data.report?.summary ?? "");
 
   if (data.metrics.length === 0) {
     return (
@@ -56,62 +29,70 @@ export default function WeekGrid({ data }: { data: WeekData }) {
     );
   }
 
+  const entries = data.metrics
+    .filter((m) => m.formula_type !== "overtime")
+    .map((m) => {
+      const raw = vals[m.id]?.trim() ?? "";
+      return { metric_id: m.id, value: raw === "" ? null : Number(raw) };
+    });
+  const invalid = entries.some((e) => e.value !== null && (Number.isNaN(e.value) || e.value < 0));
+
+  async function saveNumbers() {
+    if (invalid) {
+      save.setError("Enter a number of 0 or more for each metric.");
+      return false;
+    }
+    return save.run("PUT", "/weekly", { week_start: data.week_start, entries });
+  }
+
   return (
     <div className="panel">
-      <div className="tablewrap">
-        <table className="grid">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              {data.days.map((d) => (
-                <th key={d} className={`n${d === data.today ? " today" : ""}`}>
-                  {shortDay(d)}
-                  <small>{dayMonth(d)}</small>
-                </th>
-              ))}
-              <th className="n">Total</th>
-              <th className="n">Target</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.metrics.map((m) => {
-              const total = data.days.reduce((s, d) => s + (Number(vals[k(m.id, d)]) || 0), 0);
-              return (
-                <tr key={m.id}>
-                  <td>
-                    {m.name}
-                    <div className="muted" style={{ fontSize: 13 }}>
-                      {m.unit || "units"}
-                    </div>
-                  </td>
-                  {data.days.map((d) => (
-                    <td key={d} className={`n${d === data.today ? " today" : ""}`}>
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        inputMode="decimal"
-                        aria-label={`${m.name}, ${shortDay(d)} ${dayMonth(d)}`}
-                        value={vals[k(m.id, d)]}
-                        disabled={!data.editable || d > lastDay}
-                        onChange={(e) => setVals((v) => ({ ...v, [k(m.id, d)]: e.target.value }))}
-                        onBlur={() => save(m.id, d)}
-                      />
-                    </td>
-                  ))}
-                  <td className="n">
-                    <strong>{fmt(total)}</strong>
-                  </td>
-                  <td className="n muted">{m.formula_type === "ratio" ? fmt(m.target) : "–"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="msg error" role="alert">
-        {msg}
-      </div>
+      <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+        <legend style={{ padding: 0, marginBottom: 12, fontWeight: 600 }}>This week&apos;s results</legend>
+        <div className="stack">
+          {data.metrics.map((m) => {
+            const overtime = m.formula_type === "overtime";
+            const done = overtime ? data.time_hours ?? 0 : Number(vals[m.id]) || 0;
+            return (
+              <div className="row" key={m.id} style={{ alignItems: "end" }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <label htmlFor={`m-${m.id}`}>{m.name}</label>
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    {overtime
+                      ? `From Time tracking · target ${fmt(m.target)} ${m.unit || "hours"}`
+                      : m.formula_type === "ratio"
+                        ? `Weekly total · target ${fmt(m.target)} ${m.unit || "units"}`
+                        : `Weekly total · ${m.unit || "units"}`}
+                  </div>
+                </div>
+                {overtime ? (
+                  <div>
+                    <input id={`m-${m.id}`} value={fmt(done)} readOnly disabled aria-label={`${m.name} from tracked time`} />
+                    {data.editable && (
+                      <div>
+                        <Link href="/time">Log time</Link>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      id={`m-${m.id}`}
+                      type="number"
+                      min={0}
+                      step="any"
+                      inputMode="decimal"
+                      value={vals[m.id] ?? ""}
+                      disabled={!data.editable}
+                      onChange={(e) => setVals((v) => ({ ...v, [m.id]: e.target.value }))}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <div className="stack" style={{ marginTop: 16 }}>
         {data.status === "returned" && data.report?.review_comment && (
@@ -134,20 +115,26 @@ export default function WeekGrid({ data }: { data: WeekData }) {
               <textarea id="summary" maxLength={2000} value={summary} onChange={(e) => setSummary(e.target.value)} />
             </div>
             <div className="row">
+              <button className="btn secondary" disabled={save.busy || invalid} onClick={() => saveNumbers()}>
+                Save
+              </button>
               <button
                 className="btn"
-                disabled={submit.busy}
-                onClick={() => {
-                  if (window.confirm("Submit this week for review? You won't be able to edit it unless it's returned.")) {
-                    submit.run("POST", "/report/submit", { week_start: data.week_start, summary });
-                  }
+                disabled={submit.busy || save.busy}
+                onClick={async () => {
+                  if (!window.confirm("Submit this week for review? You won't be able to edit it unless it's returned.")) return;
+                  if (!(await saveNumbers())) return;
+                  submit.run("POST", "/report/submit", { week_start: data.week_start, summary });
                 }}
               >
                 {data.status === "returned" ? "Resubmit week" : "Submit week for review"}
               </button>
-              <span className="muted">Best done at the weekend, once your numbers are in.</span>
             </div>
-            {submit.error && <div className="msg error" role="alert">{submit.error}</div>}
+            {(save.error || submit.error) && (
+              <div className="msg error" role="alert">
+                {save.error || submit.error}
+              </div>
+            )}
           </>
         )}
       </div>

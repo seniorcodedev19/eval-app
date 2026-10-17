@@ -7,6 +7,7 @@ const googleReady = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGL
 const apiUrl = process.env.API_URL ?? "http://localhost:4000";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     ...(googleReady
       ? [

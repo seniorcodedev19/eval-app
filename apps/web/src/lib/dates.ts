@@ -1,5 +1,6 @@
 // Weeks run Sunday to Saturday; dates are 'YYYY-MM-DD' strings handled in UTC.
 export const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+export const todayUtc = () => isoDate(new Date());
 
 export function addDays(s: string, n: number): string {
   const d = new Date(`${s}T00:00:00Z`);

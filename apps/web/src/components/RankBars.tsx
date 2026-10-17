@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { fmt } from "@/lib/format";
 import type { TeamWeekRow } from "@/lib/types";
@@ -14,7 +15,7 @@ const sorts = {
 type SortKey = keyof typeof sorts;
 
 // Bar chart of the team's weekly totals with a choice of ordering.
-export default function RankBars({ rows }: { rows: TeamWeekRow[] }) {
+export default function RankBars({ rows, week }: { rows: TeamWeekRow[]; week?: string }) {
   const [sort, setSort] = useState<SortKey>("total_desc");
   if (rows.length === 0) return <div className="panel empty">No active people in this team yet.</div>;
 
@@ -38,7 +39,8 @@ export default function RankBars({ rows }: { rows: TeamWeekRow[] }) {
         {sorted.map((r) => (
           <li key={r.user_id}>
             <div className="nm">
-              {r.name} <StatusPill status={r.status} />
+              {week ? <Link href={`/team/${r.user_id}?week=${week}`}>{r.name}</Link> : r.name}{" "}
+              <StatusPill status={r.status} />
             </div>
             <div className="track" role="img" aria-label={`${r.name}: ${fmt(r.total)} points`}>
               <span

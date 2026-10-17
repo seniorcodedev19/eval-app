@@ -7,13 +7,13 @@ export default function ProgressList({ score, metrics }: { score: Score; metrics
     <div className="progress">
       {score.breakdown.map((b) => {
         const u = unit(b.metric_id);
-        if (b.formula_type === "count") {
+        if (b.formula_type === "count" || b.part === "bonus") {
           return (
-            <div key={b.metric_id}>
+            <div key={b.key}>
               <div className="top">
                 <span>{b.name}</span>
                 <span className="muted">
-                  {fmt(b.done)} {u} · +{fmt(b.base)} pts
+                  {fmt(b.done)} {u} · +{fmt(b.contribution)} pts
                 </span>
               </div>
             </div>
@@ -21,7 +21,7 @@ export default function ProgressList({ score, metrics }: { score: Score; metrics
         }
         const pct = b.planned > 0 ? (b.done / b.planned) * 100 : 0;
         return (
-          <div key={b.metric_id}>
+          <div key={b.key}>
             <div className="top">
               <span>{b.name}</span>
               <span className="muted">

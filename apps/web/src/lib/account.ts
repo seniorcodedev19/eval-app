@@ -1,3 +1,6 @@
+import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
+import { signIn } from "@/auth";
 import { API_URL } from "@/lib/api";
 
 export async function createAccount(email: string, password: string, name: string): Promise<string | null> {
@@ -14,4 +17,15 @@ export async function createAccount(email: string, password: string, name: strin
   if (res.ok) return null;
   const body = (await res.json().catch(() => ({}))) as { error?: string };
   return body.error ?? "Could not create the account";
+}
+
+export async function signInWithPassword(email: string, password: string, redirectTo = "/dashboard") {
+  try {
+    await signIn("credentials", { email, password, redirectTo });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect("/login?error=CredentialsSignin");
+    }
+    throw error;
+  }
 }

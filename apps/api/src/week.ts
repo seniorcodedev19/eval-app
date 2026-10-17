@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import { weekDays } from "./dates";
+import { isoDate, weekDays } from "./dates";
 import {
   computeScore,
   dayPoints,
@@ -35,7 +35,7 @@ export type MetricRow = WeeklyMetric & { team_id: number | null; active: boolean
 // Metrics a person reports on: the global ones plus their team's.
 export async function metricsForTeam(teamId: number | null, onlyActive: boolean): Promise<MetricRow[]> {
   const { rows } = await pool.query<MetricRow>(
-    `select id, key, name, formula_type, weight, cap, target, unit, team_id, active
+    `select id, key, name, formula_type, weight, cap, target, overtime_rate, unit, team_id, active
      from metrics
      where (team_id is null or team_id = $1) and ($2::boolean = false or active)
      order by id`,
@@ -53,35 +53,89 @@ export async function getReport(userId: number, weekStart: string): Promise<Repo
 }
 
 export async function dailyMap(userId: number, days: string[]): Promise<DailyMap> {
-  const { rows } = await pool.query<{ metric_id: number; entry_date: string; value: number }>(
+  const { rows } = await pool.query<{ metric_id: number; entry_date: string | Date; value: number }>(
     "select metric_id, entry_date, value from daily_entries where user_id=$1 and entry_date between $2 and $3",
     [userId, days[0], days[6]],
   );
   const out: DailyMap = {};
-  for (const r of rows) (out[r.metric_id] ??= {})[r.entry_date] = r.value;
+  for (const r of rows) (out[r.metric_id] ??= {})[dayKey(r.entry_date)] = Number(r.value);
   return out;
 }
 
+const dayKey = (v: string | Date) => (v instanceof Date ? isoDate(v) : String(v).slice(0, 10));
+
+export async function timeHoursByDay(userId: number, days: string[]): Promise<number[]> {
+  const { rows } = await pool.query<{ log_date: string | Date; minutes: number }>(
+    `select log_date, sum(minutes)::int as minutes
+     from time_logs where user_id=$1 and log_date between $2 and $3
+     group by log_date`,
+    [userId, days[0], days[6]],
+  );
+  const by: Record<string, number> = {};
+  for (const r of rows) by[dayKey(r.log_date)] = Number(r.minutes);
+  return days.map((d) => Math.round(((by[d] ?? 0) / 60) * 100) / 100);
+}
+
+function applyTrackedTime(metrics: MetricRow[], daily: DailyMap, hoursByDay: number[], days: string[]) {
+  for (const m of metrics) {
+    if (m.formula_type !== "overtime") continue;
+    daily[m.id] = {};
+    days.forEach((d, i) => {
+      if (hoursByDay[i] > 0) daily[m.id][d] = hoursByDay[i];
+    });
+  }
+}
+
 export function finalScore(r: ReportRow): Score {
-  const total = r.total ?? 0;
-  return { total, base: r2(total - r.bonus), bonus: r.bonus, achievement_pct: r.achievement_pct, breakdown: r.breakdown ?? [] };
+  const breakdown = r.breakdown ?? [];
+  const metricBase = r2(breakdown.reduce((s, b) => s + Number(b.base), 0));
+  const total = r.total ?? r2(metricBase + breakdown.reduce((s, b) => s + Number(b.bonus), 0) + Number(r.bonus));
+  return {
+    total,
+    base: metricBase,
+    bonus: r2(total - metricBase),
+    achievement_pct: r.achievement_pct,
+    breakdown,
+  };
 }
 
 // Everything about one person's week. Approved weeks return the stored final score.
 export async function weekSnapshot(user: { id: number; team_id: number | null }, weekStart: string) {
   const days = weekDays(weekStart);
-  const [metrics, daily, report] = await Promise.all([
+  const [metrics, daily, report, hoursByDay] = await Promise.all([
     metricsForTeam(user.team_id, true),
     dailyMap(user.id, days),
     getReport(user.id, weekStart),
+    timeHoursByDay(user.id, days),
   ]);
+  applyTrackedTime(metrics, daily, hoursByDay, days);
   const live = computeScore(
     metrics,
-    metrics.map((m) => ({ metric_id: m.id, planned: m.target, done: sumDaily(daily[m.id]), bonus: 0 })),
+    metrics.map((m) => ({
+      metric_id: m.id,
+      planned: Number(m.target),
+      done: sumDaily(daily[m.id]),
+      bonus: 0,
+    })),
   );
   const score = report?.status === "approved" && report.breakdown ? finalScore(report) : live;
-  const hasData = Object.values(daily).some((d) => Object.keys(d).length > 0);
-  return { days, metrics, daily, report, live, score, hasData, day_points: dayPoints(metrics, daily, days) };
+  const timeHours = hoursByDay.reduce((s, h) => s + h, 0);
+  const hasData = timeHours > 0 || Object.values(daily).some((d) => Object.keys(d).length > 0);
+  return {
+    days,
+    metrics,
+    daily,
+    report,
+    live,
+    score,
+    hasData,
+    time_hours: r2(timeHours),
+    day_points: dayPoints(
+      metrics.filter((m) => m.formula_type === "overtime"),
+      daily,
+      days,
+    ),
+  };
 }
 
 export const publicReport = (r: ReportRow | null) =>

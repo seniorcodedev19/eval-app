@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import { signInWithPassword } from "@/lib/account";
 
 const googleReady = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
@@ -26,11 +27,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <form
         action={async (formData: FormData) => {
           "use server";
-          await signIn("credentials", {
-            email: String(formData.get("email") ?? ""),
-            password: String(formData.get("password") ?? ""),
-            redirectTo: "/dashboard",
-          });
+          await signInWithPassword(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
         }}
       >
         <label htmlFor="email">

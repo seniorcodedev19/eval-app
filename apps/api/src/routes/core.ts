@@ -10,7 +10,7 @@ core.get("/me", h(async (req, res) => {
   res.json(req.user);
 }));
 
-const profileSql = `select u.id, u.email, u.name, u.role, u.team_id, t.name as team_name, u.job_title, u.bio
+const profileSql = `select u.id, u.email, u.name, u.role, u.team_id, t.name as team_name, u.job_title, u.bio, u.avatar
                     from users u left join teams t on t.id = u.team_id where u.id = $1`;
 
 core.get("/profile", h(async (req, res) => {
@@ -30,6 +30,26 @@ core.patch("/profile", h(async (req, res) => {
     "update users set name=coalesce($2,name), job_title=coalesce($3,job_title), bio=coalesce($4,bio) where id=$1",
     [req.user!.id, b.name ?? null, b.job_title ?? null, b.bio ?? null],
   );
+  const { rows } = await pool.query(profileSql, [req.user!.id]);
+  res.json(rows[0]);
+}));
+
+const avatarDataUrl = z
+  .string()
+  .max(350_000)
+  .regex(/^data:image\/(jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i, "Use a JPEG, PNG, WebP, or GIF image");
+
+core.put("/profile/avatar", h(async (req, res) => {
+  const b = z.object({ image: avatarDataUrl }).parse(req.body);
+  await pool.query("update users set avatar=$2 where id=$1", [req.user!.id, b.image]);
+  await audit(req.user!.id, "update", "avatar", req.user!.id);
+  const { rows } = await pool.query(profileSql, [req.user!.id]);
+  res.json(rows[0]);
+}));
+
+core.delete("/profile/avatar", h(async (req, res) => {
+  await pool.query("update users set avatar=null where id=$1", [req.user!.id]);
+  await audit(req.user!.id, "delete", "avatar", req.user!.id);
   const { rows } = await pool.query(profileSql, [req.user!.id]);
   res.json(rows[0]);
 }));

@@ -27,7 +27,7 @@ export default async function TimePage({ searchParams }: { searchParams: Promise
         <div>
           <h1>Time tracking</h1>
           <p className="sub" style={{ margin: 0 }}>
-            {hours(d.total_minutes)} logged this week
+            {hours(d.total_minutes)} logged this week. Overtime metrics on the dashboard use these hours.
           </p>
         </div>
         <WeekPicker base="/time" weekStart={d.week_start} weekEnd={d.week_end} today={d.today} />

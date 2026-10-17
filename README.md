@@ -16,13 +16,15 @@ apps/api   Express + pg, scoring, roles, audit log
 4. The **manager reviews**: approve (optionally adding bonus points) or return with a comment. Approving stores the final score; the week is then locked.
 5. Everyone sees the current week's progress on the Dashboard. Managers also see the team bar chart (orderable by points, achievement or name) and a review queue.
 
-Scoring (per week):
+Scoring (Sunday–Saturday week):
 ```
-ratio metric: min(done / weekly target, cap) * weight      done = sum of the daily values
-count metric: done * weight
-total = sum of metrics + manager bonus
+ratio metric:    min(sum(daily) / weekly target, cap) * weight
+count metric:    sum(daily) * weight
+overtime metric: (min(done, target) / target * weight) + (max(0, done - target) * overtime bonus)
+                 e.g. 95 hours vs 90: (90/90 * weight) + (5 * bonus)
+total = sum of metrics + manager bonus (on approve)
 ```
-Logic: `apps/api/src/scoring.ts` (tests: `npm test`).
+Logic: `apps/api/src/scoring.ts` (tests: `npm test`). Team and person pages use the same weekly snapshot as Dashboard.
 
 Roles: **member** (own data), **manager** (their team: metrics, reviews, interviews, team views), **admin** (everything, plus people and teams).
 Nobody can approve their own report; an admin reviews managers' weeks.
@@ -57,7 +59,7 @@ Leave `ALLOWED_EMAIL_DOMAIN` empty to allow any Gmail account, or set it (e.g. `
 New people start as members with no team; an admin assigns a team and role.
 
 ## Notes and choices
-- Weeks run Monday to Sunday, dates in UTC.
+- Weeks run Sunday to Saturday, dates in UTC.
 - "Interviews" are 1:1 review meetings a manager schedules with a team member, with notes both can read.
 - Members see their own progress; only managers and admins see the team chart.
 - Entries lock when the week is submitted; a returned week can be edited and resubmitted.

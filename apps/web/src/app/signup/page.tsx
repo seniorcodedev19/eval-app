@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
-import { createAccount } from "@/lib/account";
+import { auth } from "@/auth";
+import { createAccount, signInWithPassword } from "@/lib/account";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if ((await auth())?.user) redirect("/dashboard");
@@ -24,7 +24,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           const name = String(formData.get("name") ?? "").trim();
           const error = await createAccount(email, password, name);
           if (error) redirect(`/signup?error=${encodeURIComponent(error)}`);
-          await signIn("credentials", { email, password, redirectTo: "/dashboard" });
+          await signInWithPassword(email, password);
         }}
       >
         <label htmlFor="name">

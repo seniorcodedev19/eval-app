@@ -13,7 +13,7 @@ metrics.get("/metrics", h(async (req, res) => {
   const actor = req.user!;
   if (actor.role === "admin") {
     const { rows } = await pool.query(
-      `select m.id, m.key, m.name, m.formula_type, m.weight, m.cap, m.target, m.unit, m.team_id, m.active, t.name as team_name
+      `select m.id, m.key, m.name, m.formula_type, m.weight, m.cap, m.target, m.overtime_rate, m.unit, m.team_id, m.active, t.name as team_name
        from metrics m left join teams t on t.id = m.team_id order by m.id`,
     );
     return res.json(rows);
@@ -23,10 +23,11 @@ metrics.get("/metrics", h(async (req, res) => {
 
 const fields = {
   name: z.string().trim().min(1).max(80),
-  formula_type: z.enum(["ratio", "count"]),
+  formula_type: z.enum(["ratio", "count", "overtime"]),
   weight: z.number().min(0).max(10000),
   cap: z.number().gt(0).max(10),
   target: z.number().min(0).max(1_000_000),
+  overtime_rate: z.number().min(0).max(10000),
   unit: z.string().trim().max(24),
   active: z.boolean(),
 };
@@ -38,7 +39,7 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
   const actor = req.user!;
   const b = z
     .object({ ...fields, team_id: z.number().int().nullable() })
-    .partial({ cap: true, unit: true, active: true, team_id: true })
+    .partial({ cap: true, unit: true, active: true, team_id: true, overtime_rate: true })
     .parse(req.body);
 
   let teamId: number | null;
@@ -47,14 +48,14 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
     if (actor.team_id === null) throw new HttpError(400, "You are not assigned to a team yet");
     teamId = actor.team_id;
   }
-  if (b.formula_type === "ratio" && b.target <= 0) {
-    throw new HttpError(400, "A ratio metric needs a weekly target above 0");
+  if ((b.formula_type === "ratio" || b.formula_type === "overtime") && b.target <= 0) {
+    throw new HttpError(400, "This metric needs a weekly target above 0");
   }
 
   const { rows } = await pool.query(
-    `insert into metrics (key, name, formula_type, weight, cap, target, unit, active, team_id, created_by)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-     returning id, key, name, formula_type, weight, cap, target, unit, team_id, active`,
+    `insert into metrics (key, name, formula_type, weight, cap, target, overtime_rate, unit, active, team_id, created_by)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     returning id, key, name, formula_type, weight, cap, target, overtime_rate, unit, team_id, active`,
     [
       `${slug(b.name)}_${randomBytes(2).toString("hex")}`,
       b.name,
@@ -62,6 +63,7 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
       b.weight,
       b.cap ?? 1.2,
       b.target,
+      b.overtime_rate ?? 0,
       b.unit ?? "",
       b.active ?? true,
       teamId,
@@ -75,21 +77,39 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
 metrics.patch("/metrics/:id", requireRole("admin"), h(async (req, res) => {
   const actor = req.user!;
   const id = Number(req.params.id);
-  const b = z.object(fields).omit({ formula_type: true }).partial().parse(req.body);
+  const b = z.object(fields).partial().parse(req.body);
 
-  const cur = await pool.query("select team_id from metrics where id=$1", [id]);
+  const cur = await pool.query("select team_id, formula_type, target from metrics where id=$1", [id]);
   if (!cur.rows[0]) throw new HttpError(404, "Metric not found");
   if (actor.role !== "admin" && cur.rows[0].team_id !== actor.team_id) {
     throw new HttpError(403, "Only an admin can change metrics shared by every team");
   }
 
+  const nextType = b.formula_type ?? cur.rows[0].formula_type;
+  const nextTarget = b.target ?? Number(cur.rows[0].target);
+  if ((nextType === "ratio" || nextType === "overtime") && nextTarget <= 0) {
+    throw new HttpError(400, "This metric needs a weekly target above 0");
+  }
+
   const { rows } = await pool.query(
     `update metrics set
-       name = coalesce($2, name), weight = coalesce($3, weight), cap = coalesce($4, cap),
-       target = coalesce($5, target), unit = coalesce($6, unit), active = coalesce($7, active)
+       name = coalesce($2, name), formula_type = coalesce($3, formula_type),
+       weight = coalesce($4, weight), cap = coalesce($5, cap),
+       target = coalesce($6, target), overtime_rate = coalesce($7, overtime_rate),
+       unit = coalesce($8, unit), active = coalesce($9, active)
      where id = $1
-     returning id, key, name, formula_type, weight, cap, target, unit, team_id, active`,
-    [id, b.name ?? null, b.weight ?? null, b.cap ?? null, b.target ?? null, b.unit ?? null, b.active ?? null],
+     returning id, key, name, formula_type, weight, cap, target, overtime_rate, unit, team_id, active`,
+    [
+      id,
+      b.name ?? null,
+      b.formula_type ?? null,
+      b.weight ?? null,
+      b.cap ?? null,
+      b.target ?? null,
+      b.overtime_rate ?? null,
+      b.unit ?? null,
+      b.active ?? null,
+    ],
   );
   await audit(actor.id, "update", "metric", id, b);
   res.json(rows[0]);
