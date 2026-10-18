@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAction } from "@/lib/client";
+import { weekStartOf } from "@/lib/dates";
 import { fmt } from "@/lib/format";
 import { isTimeTracking, type Metric, type WeekData } from "@/lib/types";
+import { WeekSelect } from "./WeekPicker";
 
 function weekTotal(data: WeekData, m: Metric) {
   if (isTimeTracking(m)) return data.time_hours ?? 0;
@@ -15,6 +18,18 @@ function weekTotal(data: WeekData, m: Metric) {
 export default function WeekGrid({ data }: { data: WeekData }) {
   const save = useAction();
   const submit = useAction();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const thisWeek = weekStartOf(data.today);
+
+  function goToWeek(start: string) {
+    const p = new URLSearchParams(searchParams.toString());
+    if (start === thisWeek) p.delete("week");
+    else p.set("week", start);
+    const q = p.toString();
+    router.push(q ? `${pathname}?${q}` : pathname);
+  }
   const [vals, setVals] = useState<Record<number, string>>(() =>
     Object.fromEntries(data.metrics.filter((m) => !isTimeTracking(m)).map((m) => [m.id, String(weekTotal(data, m) || "")])),
   );
@@ -48,8 +63,9 @@ export default function WeekGrid({ data }: { data: WeekData }) {
   return (
     <div className="panel">
       <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
-        <legend style={{ padding: 0, marginBottom: 12, fontWeight: 600 }}>This week&apos;s results</legend>
+        <legend style={{ padding: 0, marginBottom: 12, fontWeight: 600 }}>Weekly results</legend>
         <div className="stack">
+          <WeekSelect id="report-week" label="Reporting week" value={data.week_start} today={data.today} onChange={goToWeek} />
           {data.metrics.map((m) => {
             const tracking = isTimeTracking(m);
             const done = tracking ? data.time_hours ?? 0 : Number(vals[m.id]) || 0;

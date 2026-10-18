@@ -21,6 +21,14 @@ export const shortDay = (s: string) => fmtUtc(s, { weekday: "short" });
 export const dayMonth = (s: string) => fmtUtc(s, { month: "short", day: "numeric" });
 export const weekLabel = (start: string, end: string) => `${dayMonth(start)} to ${dayMonth(end)}`;
 
+export function recentWeeks(today: string, count = 26): { start: string; end: string }[] {
+  const thisWeek = weekStartOf(today);
+  return Array.from({ length: count }, (_, i) => {
+    const start = addDays(thisWeek, -7 * i);
+    return { start, end: addDays(start, 6) };
+  });
+}
+
 // A usable ?week= value or undefined.
 export function weekParam(w?: string): string | undefined {
   return w && /^\d{4}-\d{2}-\d{2}$/.test(w) && !Number.isNaN(Date.parse(w)) ? w : undefined;
