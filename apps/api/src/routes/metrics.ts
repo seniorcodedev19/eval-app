@@ -25,7 +25,7 @@ metrics.get("/metrics", h(async (req, res) => {
 
 const fields = {
   name: z.string().trim().min(1).max(80),
-  formula_type: z.enum(["ratio", "count"]),
+  formula_type: z.enum(["ratio", "count", "overtime"]),
   weight: z.number().min(0).max(10000),
   cap: z.number().gt(0).max(10),
   target: z.number().min(0).max(1_000_000),
@@ -50,7 +50,7 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
     if (actor.team_id === null) throw new HttpError(400, "You are not assigned to a team yet");
     teamId = actor.team_id;
   }
-  if (b.formula_type === "ratio" && b.target <= 0) {
+  if ((b.formula_type === "ratio" || b.formula_type === "overtime") && b.target <= 0) {
     throw new HttpError(400, "This metric needs a weekly target above 0");
   }
 
@@ -65,7 +65,7 @@ metrics.post("/metrics", requireRole("admin"), h(async (req, res) => {
       b.weight,
       b.cap ?? 1.2,
       b.target,
-      0,
+      b.formula_type === "overtime" ? (b.overtime_rate ?? 1) : 0,
       b.unit ?? "",
       b.active ?? true,
       teamId,

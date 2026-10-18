@@ -60,9 +60,11 @@ export default function WeekGrid({ data }: { data: WeekData }) {
                   <div className="muted" style={{ fontSize: 13 }}>
                     {tracking
                       ? `Logged on Time tracking · target ${fmt(m.target)} ${m.unit || "hours"}`
-                      : m.formula_type === "ratio"
-                        ? `Weekly total · target ${fmt(m.target)} ${m.unit || "units"}`
-                        : `Weekly total · ${m.unit || "units"}`}
+                      : m.formula_type === "overtime"
+                        ? `Weekly total · target ${fmt(m.target)} ${m.unit || "units"} · extra × overtime bonus`
+                        : m.formula_type === "ratio"
+                          ? `Weekly total · target ${fmt(m.target)} ${m.unit || "units"}`
+                          : `Weekly total · ${m.unit || "units"}`}
                   </div>
                 </div>
                 {tracking ? (

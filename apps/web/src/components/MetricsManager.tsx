@@ -41,6 +41,7 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
           <select aria-label={`${name || m.name} formula`} value={formula} disabled={!canEdit} onChange={(e) => setFormula(e.target.value as FormulaType)}>
             <option value="ratio">Ratio (done ÷ target)</option>
             <option value="count">Count (done)</option>
+            <option value="overtime">Overtime (base + extra bonus)</option>
           </select>
         )}
       </td>
@@ -48,7 +49,7 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
         <input type="number" step="any" min={0} aria-label={`${name || m.name} weight`} value={weight} disabled={!canEdit} onChange={(e) => setWeight(e.target.value)} />
       </td>
       <td className="n">
-        {isTimeTracking(m) ? (
+        {formula === "overtime" || isTimeTracking(m) ? (
           <input
             type="number"
             step="any"
@@ -86,7 +87,7 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
                 ...(isTimeTracking(m) ? {} : { formula_type: formula }),
                 weight: Number(weight),
                 target: needsTarget(formula) ? Number(target) : 0,
-                overtime_rate: isTimeTracking(m) ? Number(overtimeRate) : 0,
+                overtime_rate: formula === "overtime" || isTimeTracking(m) ? Number(overtimeRate) : 0,
                 unit,
                 active,
               })
@@ -108,7 +109,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
     formula_type: "ratio" as FormulaType,
     weight: "20",
     target: "5",
-    overtime_rate: "0",
+    overtime_rate: "1",
     unit: "",
     team_id: "",
   });
@@ -143,7 +144,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
 
       <h2 style={{ marginTop: 24 }}>Add a metric</h2>
       <p className="sub" style={{ marginTop: -4 }}>
-        Time Tracking is built in: log hours on the Time page. Add other metrics as weekly totals (ratio or count).
+        Time Tracking is built in (hours from the Time page). Other metrics can use ratio, count, or the same overtime formula with a weekly total.
       </p>
       <div className="row">
         <div>
@@ -155,12 +156,26 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
           <select id="m-type" value={f.formula_type} onChange={(e) => setF({ ...f, formula_type: e.target.value as FormulaType })}>
             <option value="ratio">Ratio (done ÷ target)</option>
             <option value="count">Count (done)</option>
+            <option value="overtime">Overtime (base + extra bonus)</option>
           </select>
         </div>
         <div>
           <label htmlFor="m-weight">Weight (base)</label>
           <input id="m-weight" type="number" step="any" min={0} value={f.weight} onChange={(e) => setF({ ...f, weight: e.target.value })} />
         </div>
+        {f.formula_type === "overtime" && (
+          <div>
+            <label htmlFor="m-bonus">Overtime bonus</label>
+            <input
+              id="m-bonus"
+              type="number"
+              step="any"
+              min={0}
+              value={f.overtime_rate}
+              onChange={(e) => setF({ ...f, overtime_rate: e.target.value })}
+            />
+          </div>
+        )}
         {needsTarget(f.formula_type) && (
           <div>
             <label htmlFor="m-target">Weekly target</label>
@@ -193,7 +208,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
               formula_type: f.formula_type,
               weight: Number(f.weight),
               target: needsTarget(f.formula_type) ? Number(f.target) : 0,
-              overtime_rate: 0,
+              overtime_rate: f.formula_type === "overtime" ? Number(f.overtime_rate) : 0,
               unit: f.unit,
               ...(me.role === "admin" ? { team_id: f.team_id ? Number(f.team_id) : null } : {}),
             });
