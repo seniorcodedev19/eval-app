@@ -31,6 +31,8 @@ export interface Entry {
   updated_at?: string;
 }
 export type FormulaType = "ratio" | "count" | "overtime";
+export const TIME_TRACKING_KEY = "time_tracking";
+export const isTimeTracking = (m: { key: string }) => m.key === TIME_TRACKING_KEY;
 export interface Metric {
   id: number;
   key: string;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAction } from "@/lib/client";
-import type { FormulaType, Metric, Team, User } from "@/lib/types";
+import { isTimeTracking, type FormulaType, type Metric, type Team, type User } from "@/lib/types";
 
 const Err = ({ text }: { text: string | null }) =>
   text ? <div className="msg error" role="alert">{text}</div> : null;
@@ -35,17 +35,20 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
         </div>
       </td>
       <td>
-        <select aria-label={`${name || m.name} formula`} value={formula} disabled={!canEdit} onChange={(e) => setFormula(e.target.value as FormulaType)}>
-          <option value="ratio">Ratio (done ÷ target)</option>
-          <option value="count">Count (done)</option>
-          <option value="overtime">Overtime (base + extra bonus)</option>
-        </select>
+        {isTimeTracking(m) ? (
+          <span className="muted">Time logs (built-in)</span>
+        ) : (
+          <select aria-label={`${name || m.name} formula`} value={formula} disabled={!canEdit} onChange={(e) => setFormula(e.target.value as FormulaType)}>
+            <option value="ratio">Ratio (done ÷ target)</option>
+            <option value="count">Count (done)</option>
+          </select>
+        )}
       </td>
       <td className="n">
         <input type="number" step="any" min={0} aria-label={`${name || m.name} weight`} value={weight} disabled={!canEdit} onChange={(e) => setWeight(e.target.value)} />
       </td>
       <td className="n">
-        {formula === "overtime" ? (
+        {isTimeTracking(m) ? (
           <input
             type="number"
             step="any"
@@ -70,20 +73,20 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
         <input type="text" aria-label={`${name || m.name} unit`} value={unit} maxLength={24} disabled={!canEdit} onChange={(e) => setUnit(e.target.value)} style={{ width: 90 }} />
       </td>
       <td>
-        <input type="checkbox" aria-label={`${name || m.name} is active`} checked={active} disabled={!canEdit} onChange={(e) => setActive(e.target.checked)} />
+        <input type="checkbox" aria-label={`${name || m.name} is active`} checked={isTimeTracking(m) ? true : active} disabled={!canEdit || isTimeTracking(m)} onChange={(e) => setActive(e.target.checked)} />
       </td>
       <td>
         {canEdit && (
           <button
             className="btn secondary"
-            disabled={!dirty || !name.trim() || busy}
+            disabled={!dirty || !name.trim() || busy || (isTimeTracking(m) && Number(target) <= 0)}
             onClick={() =>
               run("PATCH", `/metrics/${m.id}`, {
                 name: name.trim(),
-                formula_type: formula,
+                ...(isTimeTracking(m) ? {} : { formula_type: formula }),
                 weight: Number(weight),
                 target: needsTarget(formula) ? Number(target) : 0,
-                overtime_rate: formula === "overtime" ? Number(overtimeRate) : 0,
+                overtime_rate: isTimeTracking(m) ? Number(overtimeRate) : 0,
                 unit,
                 active,
               })
@@ -105,7 +108,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
     formula_type: "ratio" as FormulaType,
     weight: "20",
     target: "5",
-    overtime_rate: "1",
+    overtime_rate: "0",
     unit: "",
     team_id: "",
   });
@@ -140,39 +143,24 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
 
       <h2 style={{ marginTop: 24 }}>Add a metric</h2>
       <p className="sub" style={{ marginTop: -4 }}>
-        Ratio: done ÷ target × weight. Count: done × weight. Overtime: (min(done, target) ÷ target × weight) + extra ×
-        bonus. Example: 95 hours vs 90 → (90/90 × weight) + (5 × bonus).
+        Time Tracking is built in: log hours on the Time page. Add other metrics as weekly totals (ratio or count).
       </p>
       <div className="row">
         <div>
           <label htmlFor="m-name">Name</label>
-          <input id="m-name" placeholder="Tracked time" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <input id="m-name" placeholder="Job apply" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         </div>
         <div>
           <label htmlFor="m-type">Formula</label>
           <select id="m-type" value={f.formula_type} onChange={(e) => setF({ ...f, formula_type: e.target.value as FormulaType })}>
             <option value="ratio">Ratio (done ÷ target)</option>
             <option value="count">Count (done)</option>
-            <option value="overtime">Overtime (base + extra bonus)</option>
           </select>
         </div>
         <div>
           <label htmlFor="m-weight">Weight (base)</label>
           <input id="m-weight" type="number" step="any" min={0} value={f.weight} onChange={(e) => setF({ ...f, weight: e.target.value })} />
         </div>
-        {f.formula_type === "overtime" && (
-          <div>
-            <label htmlFor="m-bonus">Overtime bonus</label>
-            <input
-              id="m-bonus"
-              type="number"
-              step="any"
-              min={0}
-              value={f.overtime_rate}
-              onChange={(e) => setF({ ...f, overtime_rate: e.target.value })}
-            />
-          </div>
-        )}
         {needsTarget(f.formula_type) && (
           <div>
             <label htmlFor="m-target">Weekly target</label>
@@ -181,7 +169,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
         )}
         <div>
           <label htmlFor="m-unit">Unit</label>
-          <input id="m-unit" placeholder={f.formula_type === "overtime" ? "hours" : "calls"} maxLength={24} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} style={{ width: 100 }} />
+          <input id="m-unit" placeholder="items" maxLength={24} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} style={{ width: 100 }} />
         </div>
         {me.role === "admin" && (
           <div>
@@ -205,7 +193,7 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
               formula_type: f.formula_type,
               weight: Number(f.weight),
               target: needsTarget(f.formula_type) ? Number(f.target) : 0,
-              overtime_rate: f.formula_type === "overtime" ? Number(f.overtime_rate) : 0,
+              overtime_rate: 0,
               unit: f.unit,
               ...(me.role === "admin" ? { team_id: f.team_id ? Number(f.team_id) : null } : {}),
             });

@@ -22,11 +22,12 @@ async function main() {
   await pool.query("update users set team_id = $1 where team_id is null", [teamId]);
   // Global metrics (team_id null) apply to every team. Managers add their own per team in the app.
   await pool.query(
-    `insert into metrics (key, name, formula_type, weight, cap, target, unit) values
-       ('tasks_completed', 'Tasks completed', 'ratio', 50, 1.2, 10, 'tasks'),
-       ('code_reviews', 'Code reviews', 'ratio', 30, 1.2, 5, 'reviews'),
-       ('bugs_fixed', 'Bugs fixed', 'count', 1, 1.2, 0, 'bugs'),
-       ('docs_shared', 'Docs or talks shared', 'count', 2, 1.2, 0, 'items')
+    `insert into metrics (key, name, formula_type, weight, cap, target, overtime_rate, unit) values
+       ('time_tracking', 'Time Tracking', 'overtime', 40, 1.2, 90, 1, 'hours'),
+       ('tasks_completed', 'Tasks completed', 'ratio', 50, 1.2, 10, 0, 'tasks'),
+       ('code_reviews', 'Code reviews', 'ratio', 30, 1.2, 5, 0, 'reviews'),
+       ('bugs_fixed', 'Bugs fixed', 'count', 1, 1.2, 0, 0, 'bugs'),
+       ('docs_shared', 'Docs or talks shared', 'count', 2, 1.2, 0, 0, 'items')
      on conflict (key) do nothing`,
   );
   console.log("seeded a team, four starter metrics, and the admin user");

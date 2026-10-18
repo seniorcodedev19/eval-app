@@ -5,6 +5,7 @@ import { pool } from "../db";
 import { addDays, parseWeek, todayUtc, weekStartOf } from "../dates";
 import type { User } from "../types";
 import { audit, dateStr, h, HttpError } from "../util";
+import { isTimeTracking } from "../scoring";
 import { getReport, publicReport, weekSnapshot } from "../week";
 
 export const week = Router();
@@ -64,12 +65,12 @@ week.put("/daily", h(async (req, res) => {
   if (report && (report.status === "submitted" || report.status === "approved")) {
     throw new HttpError(400, `This week is ${report.status}, so entries are locked`);
   }
-  const m = await pool.query<{ id: number; formula_type: string }>(
-    "select id, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
+  const m = await pool.query<{ id: number; key: string; formula_type: string }>(
+    "select id, key, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
     [b.metric_id, actor.team_id],
   );
   if (!m.rows[0]) throw new HttpError(404, "Metric not found");
-  if (m.rows[0].formula_type === "overtime") {
+  if (isTimeTracking(m.rows[0])) {
     throw new HttpError(400, "Working time comes from Time tracking, not this form");
   }
 
@@ -106,12 +107,12 @@ week.put("/weekly", h(async (req, res) => {
   }
 
   for (const e of b.entries) {
-    const m = await pool.query<{ id: number; formula_type: string }>(
-      "select id, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
+    const m = await pool.query<{ id: number; key: string; formula_type: string }>(
+      "select id, key, formula_type from metrics where id=$1 and active and (team_id is null or team_id = $2)",
       [e.metric_id, actor.team_id],
     );
     if (!m.rows[0]) throw new HttpError(404, "Metric not found");
-    if (m.rows[0].formula_type === "overtime") continue;
+    if (isTimeTracking(m.rows[0])) continue;
 
     await pool.query(
       "delete from daily_entries where user_id=$1 and metric_id=$2 and entry_date between $3 and $4",

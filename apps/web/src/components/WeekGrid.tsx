@@ -4,19 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAction } from "@/lib/client";
 import { fmt } from "@/lib/format";
-import type { Metric, WeekData } from "@/lib/types";
+import { isTimeTracking, type Metric, type WeekData } from "@/lib/types";
 
 function weekTotal(data: WeekData, m: Metric) {
-  if (m.formula_type === "overtime") return data.time_hours ?? 0;
+  if (isTimeTracking(m)) return data.time_hours ?? 0;
   return Object.values(data.daily[m.id] ?? {}).reduce((s, v) => s + Number(v), 0);
 }
 
-// One weekly value per metric. Overtime hours come from Time tracking.
+// One weekly value per metric. Time Tracking hours come from the Time page.
 export default function WeekGrid({ data }: { data: WeekData }) {
   const save = useAction();
   const submit = useAction();
   const [vals, setVals] = useState<Record<number, string>>(() =>
-    Object.fromEntries(data.metrics.filter((m) => m.formula_type !== "overtime").map((m) => [m.id, String(weekTotal(data, m) || "")])),
+    Object.fromEntries(data.metrics.filter((m) => !isTimeTracking(m)).map((m) => [m.id, String(weekTotal(data, m) || "")])),
   );
   const [summary, setSummary] = useState(data.report?.summary ?? "");
 
@@ -30,7 +30,7 @@ export default function WeekGrid({ data }: { data: WeekData }) {
   }
 
   const entries = data.metrics
-    .filter((m) => m.formula_type !== "overtime")
+    .filter((m) => !isTimeTracking(m))
     .map((m) => {
       const raw = vals[m.id]?.trim() ?? "";
       return { metric_id: m.id, value: raw === "" ? null : Number(raw) };
@@ -51,23 +51,23 @@ export default function WeekGrid({ data }: { data: WeekData }) {
         <legend style={{ padding: 0, marginBottom: 12, fontWeight: 600 }}>This week&apos;s results</legend>
         <div className="stack">
           {data.metrics.map((m) => {
-            const overtime = m.formula_type === "overtime";
-            const done = overtime ? data.time_hours ?? 0 : Number(vals[m.id]) || 0;
+            const tracking = isTimeTracking(m);
+            const done = tracking ? data.time_hours ?? 0 : Number(vals[m.id]) || 0;
             return (
               <div className="row" key={m.id} style={{ alignItems: "end" }}>
                 <div style={{ flex: 1, minWidth: 160 }}>
-                  <label htmlFor={`m-${m.id}`}>{m.name}</label>
+                  <label htmlFor={tracking ? undefined : `m-${m.id}`}>{m.name}</label>
                   <div className="muted" style={{ fontSize: 13 }}>
-                    {overtime
-                      ? `From Time tracking · target ${fmt(m.target)} ${m.unit || "hours"}`
+                    {tracking
+                      ? `Logged on Time tracking · target ${fmt(m.target)} ${m.unit || "hours"}`
                       : m.formula_type === "ratio"
                         ? `Weekly total · target ${fmt(m.target)} ${m.unit || "units"}`
                         : `Weekly total · ${m.unit || "units"}`}
                   </div>
                 </div>
-                {overtime ? (
-                  <div>
-                    <input id={`m-${m.id}`} value={fmt(done)} readOnly disabled aria-label={`${m.name} from tracked time`} />
+                {tracking ? (
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{fmt(done)}</div>
                     {data.editable && (
                       <div>
                         <Link href="/time">Log time</Link>

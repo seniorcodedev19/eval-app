@@ -10,6 +10,12 @@
 
 export type FormulaType = "ratio" | "count" | "overtime";
 
+export const TIME_TRACKING_KEY = "time_tracking";
+
+export function isTimeTracking(m: { key?: string; formula_type?: string }) {
+  return m.key === TIME_TRACKING_KEY || m.formula_type === "overtime";
+}
+
 export interface MetricDef {
   id: number;
   key: string;

@@ -3,7 +3,9 @@ import { isoDate, weekDays } from "./dates";
 import {
   computeScore,
   dayPoints,
+  isTimeTracking,
   sumDaily,
+  TIME_TRACKING_KEY,
   type DailyMap,
   type MetricScore,
   type Score,
@@ -38,8 +40,8 @@ export async function metricsForTeam(teamId: number | null, onlyActive: boolean)
     `select id, key, name, formula_type, weight, cap, target, overtime_rate, unit, team_id, active
      from metrics
      where (team_id is null or team_id = $1) and ($2::boolean = false or active)
-     order by id`,
-    [teamId, onlyActive],
+     order by (key = $3) desc, id`,
+    [teamId, onlyActive, TIME_TRACKING_KEY],
   );
   return rows;
 }
@@ -78,7 +80,7 @@ export async function timeHoursByDay(userId: number, days: string[]): Promise<nu
 
 function applyTrackedTime(metrics: MetricRow[], daily: DailyMap, hoursByDay: number[], days: string[]) {
   for (const m of metrics) {
-    if (m.formula_type !== "overtime") continue;
+    if (!isTimeTracking(m)) continue;
     daily[m.id] = {};
     days.forEach((d, i) => {
       if (hoursByDay[i] > 0) daily[m.id][d] = hoursByDay[i];
@@ -131,7 +133,7 @@ export async function weekSnapshot(user: { id: number; team_id: number | null },
     hasData,
     time_hours: r2(timeHours),
     day_points: dayPoints(
-      metrics.filter((m) => m.formula_type === "overtime"),
+      metrics.filter(isTimeTracking),
       daily,
       days,
     ),
