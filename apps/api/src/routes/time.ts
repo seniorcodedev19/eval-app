@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { canView, requireRole } from "../auth";
+import { canView } from "../auth";
 import { pool } from "../db";
 import { addDays, isoDate, parseWeek, todayUtc, weekDays, weekStartOf } from "../dates";
 import type { User } from "../types";
@@ -77,19 +77,52 @@ time.delete("/time/:id", h(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// Hours per person for a week (managers and admins).
-time.get("/time-team", requireRole("manager", "admin"), h(async (req, res) => {
+// Hours per person per day for a week.
+time.get("/time-team", h(async (req, res) => {
   const actor = req.user!;
   const q = z.object({ week_start: z.string().optional() }).parse(req.query);
   const ws = parseWeek(q.week_start);
-  const { rows } = await pool.query(
+  const days = weekDays(ws);
+  const teamId = actor.role === "admin" ? null : actor.team_id;
+  if (teamId === null && actor.role !== "admin") {
+    return res.json({ week_start: ws, week_end: days[6], today: todayUtc(), days, rows: [] });
+  }
+  const { rows } = await pool.query<{
+    user_id: number;
+    name: string;
+    log_date: string | Date | null;
+    minutes: number;
+  }>(
     `select u.id as user_id, coalesce(nullif(u.name,''), u.email) as name,
-            coalesce(sum(t.minutes),0)::int as minutes
+            t.log_date, coalesce(sum(t.minutes),0)::int as minutes
      from users u
      left join time_logs t on t.user_id = u.id and t.log_date between $1 and $2
-     where u.active and ($3::boolean or u.team_id = $4)
-     group by u.id order by name`,
-    [ws, addDays(ws, 6), actor.role === "admin", actor.team_id],
+     where u.active and ($3::int is null or u.team_id = $3)
+     group by u.id, t.log_date
+     order by name`,
+    [days[0], days[6], teamId],
   );
-  res.json({ week_start: ws, rows });
+  const byUser = new Map<number, { user_id: number; name: string; by_day: number[] }>();
+  const dayKey = (v: string | Date) => (v instanceof Date ? isoDate(v) : String(v).slice(0, 10));
+  for (const r of rows) {
+    let u = byUser.get(r.user_id);
+    if (!u) {
+      u = { user_id: r.user_id, name: r.name, by_day: days.map(() => 0) };
+      byUser.set(r.user_id, u);
+    }
+    if (r.log_date) {
+      const i = days.indexOf(dayKey(r.log_date));
+      if (i >= 0) u.by_day[i] = r.minutes;
+    }
+  }
+  res.json({
+    week_start: ws,
+    week_end: days[6],
+    today: todayUtc(),
+    days,
+    rows: [...byUser.values()].map((u) => ({
+      ...u,
+      minutes: u.by_day.reduce((s, m) => s + m, 0),
+    })),
+  });
 }));

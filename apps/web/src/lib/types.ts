@@ -9,6 +9,7 @@ export interface User {
   team_id: number | null;
   active: boolean;
   job_title?: string;
+  bio?: string;
   avatar?: string | null;
 }
 export interface Team {
@@ -134,6 +135,13 @@ export interface TimeLog {
   task: string;
   note: string | null;
 }
+export interface TimeTeamWeek {
+  week_start: string;
+  week_end: string;
+  today: string;
+  days: string[];
+  rows: { user_id: number; name: string; minutes: number; by_day: number[] }[];
+}
 export interface TimeWeek {
   week_start: string;
   week_end: string;
@@ -172,4 +180,10 @@ export interface AuditRow {
   entity: string;
   entity_id: string | null;
   actor: string | null;
+}
+export interface AuditPage {
+  rows: AuditRow[];
+  total: number;
+  limit: number;
+  offset: number;
 }

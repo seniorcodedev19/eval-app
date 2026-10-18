@@ -293,6 +293,27 @@ input[type="checkbox"] { width: 18px; height: 18px; }
   font-size: 13px;
   color: var(--muted);
 }
+.accordion { padding: 0; }
+.accordion > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.accordion > summary::-webkit-details-marker { display: none; }
+.accordion > summary::after {
+  content: "Show";
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+}
+.accordion[open] > summary::after { content: "Hide"; }
+.accordion-body { padding: 0 16px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+
 .linechart-legend .swatch {
   display: inline-block;
   width: 12px;

@@ -71,7 +71,7 @@ core.get("/users", h(async (req, res) => {
   const actor = req.user!;
   if (actor.role === "member") throw new HttpError(403, "Not allowed");
   const { rows } = await pool.query(
-    `select id, email, name, role, team_id, active, job_title from users
+    `select id, email, name, role, team_id, active, job_title, bio from users
      where ($1::boolean or team_id = $2) order by name, email`,
     [actor.role === "admin", actor.team_id],
   );
@@ -82,6 +82,10 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
   const id = Number(req.params.id);
   const b = z
     .object({
+      name: z.string().trim().min(1).max(80).optional(),
+      email: z.string().trim().email().max(200).optional(),
+      job_title: z.string().trim().max(80).optional(),
+      bio: z.string().trim().max(500).optional(),
       role: z.enum(["admin", "manager", "member"]).optional(),
       team_id: z.number().int().nullable().optional(),
       active: z.boolean().optional(),
@@ -90,13 +94,31 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
   if (id === req.user!.id && ((b.role && b.role !== "admin") || b.active === false)) {
     throw new HttpError(400, "You can't remove your own admin access or deactivate yourself");
   }
+  if (b.email) {
+    const taken = await pool.query("select 1 from users where lower(email)=lower($1) and id<>$2", [b.email, id]);
+    if (taken.rowCount) throw new HttpError(400, "That email is already in use");
+  }
   const { rows } = await pool.query(
     `update users set
-       role = coalesce($2, role),
-       team_id = case when $3::boolean then $4 else team_id end,
-       active = coalesce($5, active)
-     where id = $1 returning id, email, name, role, team_id, active`,
-    [id, b.role ?? null, "team_id" in b, b.team_id ?? null, b.active ?? null],
+       name = coalesce($2, name),
+       email = coalesce($3, email),
+       job_title = coalesce($4, job_title),
+       bio = coalesce($5, bio),
+       role = coalesce($6, role),
+       team_id = case when $7::boolean then $8 else team_id end,
+       active = coalesce($9, active)
+     where id = $1 returning id, email, name, role, team_id, active, job_title, bio`,
+    [
+      id,
+      b.name ?? null,
+      b.email?.toLowerCase() ?? null,
+      b.job_title ?? null,
+      b.bio ?? null,
+      b.role ?? null,
+      "team_id" in b,
+      b.team_id ?? null,
+      b.active ?? null,
+    ],
   );
   if (!rows[0]) throw new HttpError(404, "User not found");
   await audit(req.user!.id, "update", "user", id, b);
@@ -104,11 +126,13 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
 }));
 
 core.get("/audit", requireRole("admin"), h(async (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 50, 200);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const total = await pool.query<{ n: number }>("select count(*)::int as n from audit_log");
   const { rows } = await pool.query(
     `select a.id, a.at, a.action, a.entity, a.entity_id, u.email as actor
-     from audit_log a left join users u on u.id = a.actor_id order by a.id desc limit $1`,
-    [limit],
+     from audit_log a left join users u on u.id = a.actor_id order by a.id desc limit $1 offset $2`,
+    [limit, offset],
   );
-  res.json(rows);
+  res.json({ rows, total: total.rows[0]?.n ?? 0, limit, offset });
 }));

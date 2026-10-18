@@ -84,8 +84,8 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           </div>
         </div>
         <div>
-          <label htmlFor="p-name">Name</label>
-          <input id="p-name" style={{ width: "100%" }} value={name} maxLength={80} onChange={(e) => { setName(e.target.value); setSaved(false); }} />
+          <label htmlFor="p-name">Display name</label>
+          <input id="p-name" style={{ width: "100%" }} value={name} maxLength={80} autoComplete="name" onChange={(e) => { setName(e.target.value); setSaved(false); }} />
         </div>
         <div>
           <label htmlFor="p-title">Job title</label>
@@ -120,7 +120,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           <dd style={{ margin: 0 }}>{profile.team_name ?? "Not on a team yet"}</dd>
         </dl>
         <p className="muted" style={{ marginBottom: 0 }}>
-          Your email, role and team are set by your Google account and an admin.
+          Email, role, and team are set by an admin. Your display name is yours to change.
         </p>
       </div>
     </div>

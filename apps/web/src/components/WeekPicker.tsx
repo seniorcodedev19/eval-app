@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDays, recentWeeks, weekLabel, weekStartOf } from "@/lib/dates";
 
-function href(base: string, extra: Record<string, string>, week?: string) {
+function href(base: string, extra: Record<string, string>, week: string | undefined, param: string) {
   const p = new URLSearchParams(extra);
-  if (week) p.set("week", week);
+  if (week) p.set(param, week);
+  else p.delete(param);
   const q = p.toString();
   return q ? `${base}?${q}` : base;
 }
@@ -50,23 +51,29 @@ export default function WeekPicker({
   weekEnd,
   today,
   extra = {},
+  param = "week",
+  selectId,
 }: {
   base: string;
   weekStart: string;
   weekEnd: string;
   today: string;
   extra?: Record<string, string>;
+  param?: string;
+  selectId?: string;
 }) {
   const router = useRouter();
   const thisWeek = weekStartOf(today);
+  const go = (start?: string) => href(base, extra, start, param);
   return (
     <div className="row" style={{ alignItems: "end" }}>
       <WeekSelect
+        id={selectId ?? param}
         value={weekStart}
         today={today}
-        onChange={(start) => router.push(href(base, extra, start === thisWeek ? undefined : start))}
+        onChange={(start) => router.push(go(start === thisWeek ? undefined : start))}
       />
-      <Link className="btn secondary" href={href(base, extra, addDays(weekStart, -7))} aria-label="Previous week">
+      <Link className="btn secondary" href={go(addDays(weekStart, -7))} aria-label="Previous week">
         ←
       </Link>
       <div style={{ minWidth: 120, textAlign: "center", paddingBottom: 6 }}>
@@ -75,7 +82,7 @@ export default function WeekPicker({
       </div>
       <Link
         className="btn secondary"
-        href={href(base, extra, addDays(weekStart, 7))}
+        href={go(addDays(weekStart, 7))}
         aria-label="Next week"
         aria-disabled={weekStart >= thisWeek}
         style={weekStart >= thisWeek ? { pointerEvents: "none", opacity: 0.4 } : undefined}
@@ -83,7 +90,7 @@ export default function WeekPicker({
         →
       </Link>
       {weekStart !== thisWeek && (
-        <Link className="btn secondary" href={href(base, extra)}>
+        <Link className="btn secondary" href={go(undefined)}>
           This week
         </Link>
       )}
