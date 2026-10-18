@@ -31,17 +31,20 @@ Nobody can approve their own report; an admin reviews managers' weeks.
 
 ## Run locally
 
-Requirements: Node 20+, Docker (for Postgres).
+Requirements: Node 20+, and PostgreSQL (local Docker or [Supabase](https://supabase.com)).
 
 ```bash
 npm install
-cp apps/api/.env.example apps/api/.env          # set ADMIN_EMAILS to your email
+cp apps/api/.env.example apps/api/.env          # set DATABASE_URL and ADMIN_EMAILS
 cp apps/web/.env.example apps/web/.env.local    # set AUTH_SECRET and API_JWT_SECRET
-npm run db:up
+npm run db:up          # skip if DATABASE_URL already points at Supabase
 npm run db:migrate
 npm run db:seed        # one team and four starter metrics
 npm run dev            # web on :3000, API on :4000
 ```
+
+### Supabase
+In the project: **Settings > Database**. Use the **transaction pooler** URI (port `6543`) as `DATABASE_URL` for the API, and the **session pooler or direct** URI (port `5432`) as `DIRECT_URL` for `db:migrate` / `db:seed`. The API turns on SSL for any non-localhost host.
 
 `API_JWT_SECRET` must be identical in both env files. `AUTH_SECRET`: `openssl rand -base64 32`.
 
@@ -72,10 +75,10 @@ Two Vercel projects from this repo:
 | web | `apps/web` |
 | api | `apps/api` (zero-config Express, entry `src/index.ts`) |
 
-Database: Neon via the Vercel Marketplace (pooled `DATABASE_URL`); run `npm run db:migrate` once with that URL.
+Database: Supabase Postgres. Set `DATABASE_URL` to the transaction pooler (port 6543) and `DIRECT_URL` to the session/direct URI (port 5432), then run `npm run db:migrate` once with those env vars.
 
 Env vars
 - web: `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `API_URL` (the api project's URL), `API_JWT_SECRET`, optional `ALLOWED_EMAIL_DOMAIN`. Leave `AUTH_DEV_LOGIN` unset.
-- api: `DATABASE_URL`, `API_JWT_SECRET`, `ADMIN_EMAILS`.
+- api: `DATABASE_URL`, `DIRECT_URL`, `API_JWT_SECRET`, `ADMIN_EMAILS`.
 
 Add `https://<your-web-domain>/api/auth/callback/google` to the Google OAuth redirect URIs.

@@ -1,5 +1,7 @@
-import { pool } from "./db";
+import { makePool } from "./db";
 import { hashPassword } from "./password";
+
+const pool = makePool(process.env.DIRECT_URL || process.env.DATABASE_URL);
 
 async function main() {
   await pool.query("insert into teams (name) values ('Engineering') on conflict do nothing");

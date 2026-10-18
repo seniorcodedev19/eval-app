@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { pool } from "./db";
+import { makePool } from "./db";
+
+// Prefer the direct/session URI so DDL and multi-statement files work on Supabase.
+const pool = makePool(process.env.DIRECT_URL || process.env.DATABASE_URL);
 
 async function main() {
   await pool.query(
