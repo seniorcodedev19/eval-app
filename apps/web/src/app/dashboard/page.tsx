@@ -37,13 +37,20 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             Points this week for each person. Your bar is outlined.
           </p>
         </div>
-        <WeekPicker
-          base="/dashboard"
-          weekStart={d.week_start}
-          weekEnd={d.week_end}
-          today={d.today}
-          extra={timeWeek ? { time_week: timeWeek } : {}}
-        />
+        <div className="row" style={{ alignItems: "end" }}>
+          <WeekPicker
+            base="/dashboard"
+            weekStart={d.week_start}
+            weekEnd={d.week_end}
+            today={d.today}
+            extra={timeWeek ? { time_week: timeWeek } : {}}
+          />
+          {manager && (
+            <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
+              Download CSV
+            </a>
+          )}
+        </div>
       </div>
 
       {hours.ok ? (
@@ -66,31 +73,28 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         )}
       </div>
 
-      <div className="head" style={{ marginTop: 32 }}>
-        <div className="row" style={{ alignItems: "center", margin: 0 }}>
-          <h2 style={{ margin: 0 }}>My week</h2>
-          <StatusPill status={d.status} />
-        </div>
-        {manager && (
-          <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
-            Download CSV
-          </a>
-        )}
-      </div>
-
-      {d.metrics.length === 0 ? (
-        <div className="panel empty">
-          <strong>No metrics to report on yet.</strong>
-          <div>
-            {me.role === "admin" ? "Add them under Admin." : "An admin adds the metrics your team reports on."}
-          </div>
-        </div>
-      ) : (
+      {me.role !== "admin" && (
         <>
-          <WeekGrid key={d.week_start} data={d} />
-          <div style={{ marginTop: 16 }}>
-            <Breakdown score={d.score} />
+          <div className="head" style={{ marginTop: 32 }}>
+            <div className="row" style={{ alignItems: "center", margin: 0 }}>
+              <h2 style={{ margin: 0 }}>My week</h2>
+              <StatusPill status={d.status} />
+            </div>
           </div>
+
+          {d.metrics.length === 0 ? (
+            <div className="panel empty">
+              <strong>No metrics to report on yet.</strong>
+              <div>An admin adds the metrics your team reports on.</div>
+            </div>
+          ) : (
+            <>
+              <WeekGrid key={d.week_start} data={d} />
+              <div style={{ marginTop: 16 }}>
+                <Breakdown score={d.score} />
+              </div>
+            </>
+          )}
         </>
       )}
 
