@@ -71,7 +71,7 @@ core.get("/users", h(async (req, res) => {
   const actor = req.user!;
   if (actor.role === "member") throw new HttpError(403, "Not allowed");
   const { rows } = await pool.query(
-    `select id, email, name, role, team_id, active, job_title, bio from users
+    `select id, email, name, role, team_id, active, job_title, bio, avatar from users
      where ($1::boolean or team_id = $2) order by name, email`,
     [actor.role === "admin", actor.team_id],
   );

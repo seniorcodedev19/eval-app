@@ -1,8 +1,10 @@
+import Accordion from "@/components/Accordion";
 import Breakdown from "@/components/Breakdown";
 import PointsChart from "@/components/PointsChart";
 import RankBars from "@/components/RankBars";
 import StatusPill from "@/components/StatusPill";
 import TeamTimeChart from "@/components/TeamTimeChart";
+import TeamWeekTable from "@/components/TeamWeekTable";
 import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
@@ -32,74 +34,85 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     <>
       <div className="head">
         <div>
-          <h1>Everyone&apos;s points</h1>
+          <h1>Dashboard</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Points this week for each person. Your bar is outlined.
+            Team points, hours, and weekly results. Open a section to hide or show it.
           </p>
         </div>
-        <div className="row" style={{ alignItems: "end" }}>
-          <WeekPicker
-            base="/dashboard"
-            weekStart={d.week_start}
-            weekEnd={d.week_end}
-            today={d.today}
-            extra={timeWeek ? { time_week: timeWeek } : {}}
-          />
-          {manager && (
-            <a className="btn secondary" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
-              Download CSV
-            </a>
-          )}
-        </div>
+        <WeekPicker
+          base="/dashboard"
+          weekStart={d.week_start}
+          weekEnd={d.week_end}
+          today={d.today}
+          extra={timeWeek ? { time_week: timeWeek } : {}}
+          trailing={
+            manager ? (
+              <a className="chip" href={`/api/proxy/export.csv?week_start=${d.week_start}`}>
+                CSV
+              </a>
+            ) : null
+          }
+        />
       </div>
 
       {hours.ok ? (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           <TeamTimeChart data={hours.data} meId={me.id} extra={week ? { week } : {}} />
         </div>
       ) : (
-        <div className="banner error" style={{ marginBottom: 16 }}>
+        <div className="banner error" style={{ marginBottom: 12 }}>
           {hours.error}
         </div>
       )}
 
-      <div className="panel">
-        {!team.ok ? (
-          <div className="banner error">{team.error}</div>
-        ) : rows.length === 0 ? (
-          <div className="empty">No people to chart yet this week.</div>
-        ) : (
-          <PointsChart rows={rows} meId={me.id} />
-        )}
+      <div style={{ marginBottom: 12 }}>
+        <Accordion title="Everyone's points">
+          {!team.ok ? (
+            <div className="banner error">{team.error}</div>
+          ) : rows.length === 0 ? (
+            <div className="empty">No people to chart yet this week.</div>
+          ) : (
+            <PointsChart rows={rows} meId={me.id} week={d.week_start} />
+          )}
+        </Accordion>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <Accordion title="Team results">
+          {!team.ok ? (
+            <div className="banner error">{team.error}</div>
+          ) : (
+            <TeamWeekTable me={me} weekStart={d.week_start} rows={rows} />
+          )}
+        </Accordion>
       </div>
 
       {me.role !== "admin" && (
-        <>
-          <div className="head" style={{ marginTop: 32 }}>
-            <div className="row" style={{ alignItems: "center", margin: 0 }}>
-              <h2 style={{ margin: 0 }}>My week</h2>
+        <div style={{ marginBottom: 12 }}>
+          <Accordion title="My week">
+            <div className="row" style={{ marginBottom: 12 }}>
               <StatusPill status={d.status} />
             </div>
-          </div>
-
-          {d.metrics.length === 0 ? (
-            <div className="panel empty">
-              <strong>No metrics to report on yet.</strong>
-              <div>An admin adds the metrics your team reports on.</div>
-            </div>
-          ) : (
-            <>
-              <WeekGrid key={d.week_start} data={d} />
-              <div style={{ marginTop: 16 }}>
-                <Breakdown score={d.score} />
+            {d.metrics.length === 0 ? (
+              <div className="empty">
+                <strong>No metrics to report on yet.</strong>
+                <div>An admin adds the metrics your team reports on.</div>
               </div>
-            </>
-          )}
-        </>
+            ) : (
+              <>
+                <WeekGrid key={d.week_start} data={d} />
+                <div style={{ marginTop: 16 }}>
+                  <Breakdown score={d.score} />
+                </div>
+              </>
+            )}
+          </Accordion>
+        </div>
       )}
 
-      <h2>Leaderboard</h2>
-      {team.ok ? <RankBars rows={rows} /> : <div className="banner error">{team.error}</div>}
+      <Accordion title="Leaderboard">
+        {team.ok ? <RankBars rows={rows} week={d.week_start} /> : <div className="banner error">{team.error}</div>}
+      </Accordion>
     </>
   );
 }

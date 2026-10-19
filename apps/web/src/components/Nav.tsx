@@ -7,11 +7,11 @@ import ThemeToggle from "./ThemeToggle";
 export default function Nav({ me }: { me: User }) {
   const links = [
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/team", label: "Team" },
     { href: "/time", label: "Time tracking" },
     { href: "/interviews", label: "Interviews" },
     { href: "/profile", label: "Profile" },
   ];
-  if (me.role !== "member") links.splice(1, 0, { href: "/team", label: "Team" });
   if (me.role === "admin") links.push({ href: "/admin", label: "Admin" });
 
   return (

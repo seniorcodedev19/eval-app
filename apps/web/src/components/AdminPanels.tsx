@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAction } from "@/lib/client";
 import type { Team, User } from "@/lib/types";
+import Avatar from "./Avatar";
 
 const Err = ({ text }: { text: string | null }) =>
   text ? <div className="msg error" role="alert">{text}</div> : null;
@@ -15,9 +16,14 @@ function UserRow({ me, u, teams }: { me: User; u: User; teams: Team[] }) {
   return (
     <tr>
       <td>
-        <input aria-label={`Name for ${u.email}`} value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
-        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          {u.email}
+        <div className="person" style={{ marginBottom: 8 }}>
+          <Avatar name={name || u.name} email={u.email} src={u.avatar} size={32} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <input aria-label={`Name for ${u.email}`} value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              {u.email}
+            </div>
+          </div>
         </div>
       </td>
       <td>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAction } from "@/lib/client";
 import type { Interview, User } from "@/lib/types";
+import PersonCell from "./PersonCell";
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -15,11 +16,20 @@ function Card({ i, canManage }: { i: Interview; canManage: boolean }) {
 
   return (
     <div className="item">
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <strong>{i.topic}</strong>
-          <div className="muted">
-            {i.member_name} with {i.interviewer_name} ·{" "}
+          <div className="row" style={{ marginTop: 8, gap: 16 }}>
+            <PersonCell name={i.member_name} email={i.member_email} avatar={i.member_avatar} size={28} sub="Member" />
+            <PersonCell
+              name={i.interviewer_name}
+              email={i.interviewer_email}
+              avatar={i.interviewer_avatar}
+              size={28}
+              sub="Interviewer"
+            />
+          </div>
+          <div className="muted" style={{ marginTop: 8 }}>
             <span suppressHydrationWarning>{when(i.scheduled_at)}</span>
           </div>
         </div>

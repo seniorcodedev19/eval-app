@@ -90,10 +90,12 @@ time.get("/time-team", h(async (req, res) => {
   const { rows } = await pool.query<{
     user_id: number;
     name: string;
+    email: string;
+    avatar: string | null;
     log_date: string | Date | null;
     minutes: number;
   }>(
-    `select u.id as user_id, coalesce(nullif(u.name,''), u.email) as name,
+    `select u.id as user_id, coalesce(nullif(u.name,''), u.email) as name, u.email, u.avatar,
             t.log_date, coalesce(sum(t.minutes),0)::int as minutes
      from users u
      left join time_logs t on t.user_id = u.id and t.log_date between $1 and $2
@@ -102,12 +104,12 @@ time.get("/time-team", h(async (req, res) => {
      order by name`,
     [days[0], days[6], teamId],
   );
-  const byUser = new Map<number, { user_id: number; name: string; by_day: number[] }>();
+  const byUser = new Map<number, { user_id: number; name: string; email: string; avatar: string | null; by_day: number[] }>();
   const dayKey = (v: string | Date) => (v instanceof Date ? isoDate(v) : String(v).slice(0, 10));
   for (const r of rows) {
     let u = byUser.get(r.user_id);
     if (!u) {
-      u = { user_id: r.user_id, name: r.name, by_day: days.map(() => 0) };
+      u = { user_id: r.user_id, name: r.name, email: r.email, avatar: r.avatar, by_day: days.map(() => 0) };
       byUser.set(r.user_id, u);
     }
     if (r.log_date) {

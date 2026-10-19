@@ -83,7 +83,7 @@ export interface WeekData {
   week_start: string;
   week_end: string;
   today: string;
-  user: { id: number; name: string; email: string; team_id: number | null };
+  user: { id: number; name: string; email: string; team_id: number | null; avatar?: string | null };
   status: Status;
   report: WeekReport | null;
   editable: boolean;
@@ -98,6 +98,7 @@ export interface TeamWeekRow {
   user_id: number;
   name: string;
   email: string;
+  avatar?: string | null;
   role: Role;
   status: Status;
   report_id: number | null;
@@ -108,13 +109,23 @@ export interface TeamWeekRow {
   day_points: number[];
   team_id: number | null;
   team_name: string | null;
-  metric_points: { id: number; name: string; points: number }[];
+  metric_points: {
+    id: number;
+    name: string;
+    points: number;
+    planned?: number;
+    done?: number;
+    ratio?: number | null;
+    weight?: number;
+    formula_type?: FormulaType;
+  }[];
 }
 export interface QueueItem {
   report_id: number;
   user_id: number;
   name: string;
   email: string;
+  avatar?: string | null;
   week_start: string;
   week_end: string;
   summary: string | null;
@@ -140,7 +151,7 @@ export interface TimeTeamWeek {
   week_end: string;
   today: string;
   days: string[];
-  rows: { user_id: number; name: string; minutes: number; by_day: number[] }[];
+  rows: { user_id: number; name: string; email: string; avatar?: string | null; minutes: number; by_day: number[] }[];
 }
 export interface TimeWeek {
   week_start: string;
@@ -160,7 +171,11 @@ export interface Interview {
   status: "scheduled" | "done" | "cancelled";
   notes: string | null;
   member_name: string;
+  member_email: string;
+  member_avatar?: string | null;
   interviewer_name: string;
+  interviewer_email: string;
+  interviewer_avatar?: string | null;
 }
 export interface Profile {
   id: number;

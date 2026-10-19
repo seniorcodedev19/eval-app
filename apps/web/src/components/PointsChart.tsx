@@ -13,7 +13,7 @@ function metricValue(r: TeamWeekRow, metricId: number) {
   return r.metric_points?.find((m) => m.id === metricId)?.points ?? 0;
 }
 
-export default function PointsChart({ rows, meId }: { rows: TeamWeekRow[]; meId: number }) {
+export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[]; meId: number; week: string }) {
   const metrics = useMemo(() => {
     const map = new Map<number, string>();
     for (const r of rows) for (const m of r.metric_points ?? []) map.set(m.id, m.name);
@@ -40,24 +40,25 @@ export default function PointsChart({ rows, meId }: { rows: TeamWeekRow[]; meId:
     value: metricId !== null ? metricValue(r, metricId) : r.total,
     highlight: r.user_id === meId,
     tone: (r.status === "approved" ? "ok" : r.status === "submitted" ? "wait" : "muted") as "ok" | "wait" | "muted",
+    href: `/team/${r.user_id}?week=${week}`,
+    name: r.name,
+    email: r.email,
+    avatar: r.avatar,
   }));
 
   return (
     <>
-      <div className="row" style={{ marginBottom: 16 }}>
-        <div>
-          <label htmlFor="chart-order">Order by</label>
-          <select id="chart-order" value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="total_desc">Total points, high to low</option>
-            <option value="total_asc">Total points, low to high</option>
-            <option value="team">Team, A to Z</option>
-            {metrics.map((m) => (
-              <option key={m.id} value={`metric:${m.id}`}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="filters" style={{ marginBottom: 16 }}>
+        <select id="chart-order" aria-label="Order by" value={sort} onChange={(e) => setSort(e.target.value)}>
+          <option value="total_desc">Points, high to low</option>
+          <option value="total_asc">Points, low to high</option>
+          <option value="team">Team, A to Z</option>
+          {metrics.map((m) => (
+            <option key={m.id} value={`metric:${m.id}`}>
+              {m.name}
+            </option>
+          ))}
+        </select>
       </div>
       <ColumnChart
         className="people"

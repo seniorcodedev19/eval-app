@@ -1,22 +1,20 @@
 import ColumnChart from "@/components/ColumnChart";
+import PersonCell from "@/components/PersonCell";
 import TimeTracker from "@/components/TimeTracker";
 import WeekPicker from "@/components/WeekPicker";
-import { apiFetch, tryFetch } from "@/lib/api";
+import { tryFetch } from "@/lib/api";
 import { shortDay, weekParam } from "@/lib/dates";
 import { hours } from "@/lib/format";
-import type { TimeWeek, User } from "@/lib/types";
+import type { TimeWeek } from "@/lib/types";
 
 export default async function TimePage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const sp = await searchParams;
   const week = weekParam(sp.week);
   const wq = week ? `?week_start=${week}` : "";
 
-  const me = await apiFetch<User>("/me");
   const [data, team] = await Promise.all([
     tryFetch<TimeWeek>(`/time${wq}`),
-    me.role !== "member"
-      ? tryFetch<{ rows: { user_id: number; name: string; minutes: number }[] }>(`/time-team${wq}`)
-      : null,
+    tryFetch<{ rows: { user_id: number; name: string; email: string; avatar?: string | null; minutes: number }[] }>(`/time-team${wq}`),
   ]);
   if (!data.ok) return <div className="banner error">{data.error}</div>;
   const d = data.data;
@@ -47,7 +45,7 @@ export default async function TimePage({ searchParams }: { searchParams: Promise
 
       <TimeTracker key={d.week_start} data={d} />
 
-      {team?.ok && (
+      {team.ok && (
         <>
           <h2>Team hours</h2>
           <div className="panel tablewrap">
@@ -61,7 +59,9 @@ export default async function TimePage({ searchParams }: { searchParams: Promise
               <tbody>
                 {team.data.rows.map((r) => (
                   <tr key={r.user_id}>
-                    <td>{r.name}</td>
+                    <td>
+                      <PersonCell name={r.name} email={r.email} avatar={r.avatar} href={`/team/${r.user_id}?week=${d.week_start}`} />
+                    </td>
                     <td className="n">{hours(r.minutes)}</td>
                   </tr>
                 ))}

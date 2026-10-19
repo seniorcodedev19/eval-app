@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import Avatar from "@/components/Avatar";
 import Breakdown from "@/components/Breakdown";
 import ReportStatusControl from "@/components/ReportStatusControl";
 import Trend from "@/components/Trend";
@@ -19,7 +19,6 @@ export default async function PersonPage({
   const { userId } = await params;
   const week = weekParam((await searchParams).week);
   const me = await apiFetch<User>("/me");
-  if (me.role === "member") redirect("/dashboard");
 
   const wq = [`user_id=${userId}`, week ? `week_start=${week}` : ""].filter(Boolean).join("&");
   const [data, trend] = await Promise.all([
@@ -47,11 +46,14 @@ export default async function PersonPage({
         <Link href={`/team?week=${d.week_start}`}>Back to team</Link>
       </p>
       <div className="head">
-        <div>
-          <h1>{person.name || person.email}</h1>
-          <p className="sub" style={{ margin: 0 }}>
-            {person.email}
-          </p>
+        <div className="person" style={{ alignItems: "center" }}>
+          <Avatar name={person.name} email={person.email} src={person.avatar} size={48} />
+          <div>
+            <h1 style={{ margin: 0 }}>{person.name || person.email}</h1>
+            <p className="sub" style={{ margin: 0 }}>
+              {person.email}
+            </p>
+          </div>
         </div>
         <div className="row" style={{ alignItems: "center" }}>
           <ReportStatusControl

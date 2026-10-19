@@ -1,9 +1,12 @@
 import { shortDay } from "@/lib/dates";
 import { fmt } from "@/lib/format";
+import Avatar from "./Avatar";
 
 export interface LineSeries {
   id: number;
   name: string;
+  email?: string;
+  avatar?: string | null;
   values: number[];
 }
 
@@ -100,6 +103,7 @@ export default function LineChart({
         {series.map((s, si) => (
           <li key={s.id}>
             <span className="swatch" style={{ background: palette[si % palette.length] }} />
+            <Avatar name={s.name} email={s.email || s.name} src={s.avatar} size={20} />
             {s.name}
             {s.id === meId ? " (you)" : ""}
           </li>

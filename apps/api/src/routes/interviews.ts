@@ -9,7 +9,9 @@ export const interviews = Router();
 const listSql = `
   select i.id, i.member_id, i.interviewer_id, i.scheduled_at, i.topic, i.status, i.notes,
          coalesce(nullif(m.name,''), m.email) as member_name,
-         coalesce(nullif(v.name,''), v.email) as interviewer_name
+         m.email as member_email, m.avatar as member_avatar,
+         coalesce(nullif(v.name,''), v.email) as interviewer_name,
+         v.email as interviewer_email, v.avatar as interviewer_avatar
   from interviews i
   join users m on m.id = i.member_id
   join users v on v.id = i.interviewer_id`;

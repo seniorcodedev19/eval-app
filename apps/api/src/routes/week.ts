@@ -13,7 +13,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 async function getUser(id: number) {
   const { rows } = await pool.query<User>(
-    "select id, email, name, role, team_id, active from users where id=$1",
+    "select id, email, name, role, team_id, active, avatar from users where id=$1",
     [id],
   );
   if (!rows[0]) throw new HttpError(404, "User not found");
@@ -36,7 +36,7 @@ week.get("/week", h(async (req, res) => {
     week_start: ws,
     week_end: snap.days[6],
     today: todayUtc(),
-    user: { id: target.id, name: target.name, email: target.email, team_id: target.team_id },
+    user: { id: target.id, name: target.name, email: target.email, team_id: target.team_id, avatar: target.avatar },
     status,
     report: publicReport(snap.report),
     editable: target.id === actor.id && (status === "draft" || status === "returned"),
@@ -158,7 +158,7 @@ week.post("/report/submit", h(async (req, res) => {
 week.get("/review-queue", requireRole("manager", "admin"), h(async (req, res) => {
   const actor = req.user!;
   const { rows } = await pool.query(
-    `select r.id as report_id, r.user_id, r.week_start, r.summary, r.submitted_at, u.name, u.email, u.team_id
+    `select r.id as report_id, r.user_id, r.week_start, r.summary, r.submitted_at, u.name, u.email, u.avatar, u.team_id
      from weekly_reports r join users u on u.id = r.user_id
      where r.status = 'submitted' and u.id <> $1 and ($2::boolean or u.team_id = $3)
      order by r.submitted_at`,
@@ -278,7 +278,7 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
   const teamId = actor.role === "admin" ? (teamIdParam ?? null) : actor.team_id;
   if (teamId === null && actor.role !== "admin") return [];
   const { rows: users } = await pool.query<User & { team_name: string | null }>(
-    `select u.id, u.email, u.name, u.role, u.team_id, u.active, t.name as team_name
+    `select u.id, u.email, u.name, u.role, u.team_id, u.active, u.avatar, t.name as team_name
      from users u left join teams t on t.id = u.team_id
      where u.active and ($1::int is null or u.team_id = $1) order by u.name, u.email`,
     [teamId],
@@ -287,31 +287,58 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
   for (const u of users) {
     const s = await weekSnapshot(u, ws);
     const status = s.report?.status ?? "draft";
-    const hideOthers =
-      actor.role === "member" && u.id !== actor.id && status !== "submitted" && status !== "approved";
-    const metric_points = hideOthers
-      ? []
-      : Object.values(
-          s.score.breakdown.reduce<Record<number, { id: number; name: string; points: number }>>((acc, b) => {
-            const name = b.part === "bonus" ? b.name.replace(/ overtime$/, "") : b.name;
-            const cur = acc[b.metric_id] ?? { id: b.metric_id, name, points: 0 };
-            cur.points += Number(b.contribution);
-            acc[b.metric_id] = cur;
-            return acc;
-          }, {}),
-        );
+    const metric_points = Object.values(
+      s.score.breakdown.reduce<
+        Record<
+          number,
+          {
+            id: number;
+            name: string;
+            points: number;
+            planned: number;
+            done: number;
+            ratio: number | null;
+            weight: number;
+            formula_type: string;
+          }
+        >
+      >((acc, b) => {
+        const name = b.part === "bonus" ? b.name.replace(/ overtime$/, "") : b.name;
+        const cur = acc[b.metric_id] ?? {
+          id: b.metric_id,
+          name,
+          points: 0,
+          planned: 0,
+          done: 0,
+          ratio: null as number | null,
+          weight: Number(b.weight),
+          formula_type: b.formula_type,
+        };
+        cur.points += Number(b.contribution);
+        cur.done += Number(b.done);
+        if (b.part !== "bonus") {
+          cur.planned = Number(b.planned);
+          cur.ratio = b.ratio;
+          cur.weight = Number(b.weight);
+          cur.formula_type = b.formula_type;
+        }
+        acc[b.metric_id] = cur;
+        return acc;
+      }, {}),
+    );
     rows.push({
       user_id: u.id,
       name: u.name || u.email,
       email: u.email,
+      avatar: u.avatar ?? null,
       role: u.role,
       status,
       report_id: s.report?.id ?? null,
-      has_data: hideOthers ? false : s.hasData,
-      total: hideOthers ? 0 : s.score.total,
-      bonus: hideOthers ? 0 : s.score.bonus,
-      achievement_pct: hideOthers ? null : s.score.achievement_pct,
-      day_points: hideOthers ? s.day_points.map(() => 0) : s.day_points,
+      has_data: s.hasData,
+      total: s.score.total,
+      bonus: s.score.bonus,
+      achievement_pct: s.score.achievement_pct,
+      day_points: s.day_points,
       team_id: u.team_id,
       team_name: u.team_name,
       metric_points,
