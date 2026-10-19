@@ -7,7 +7,7 @@ import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { weekParam } from "@/lib/dates";
-import type { TeamTimeWeek, TeamWeekRow, User, WeekData } from "@/lib/types";
+import type { TeamWeekRow, TimeTeamWeek, User, WeekData } from "@/lib/types";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string; time_week?: string }> }) {
   const sp = await searchParams;
@@ -21,7 +21,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const [data, team, hours] = await Promise.all([
     tryFetch<WeekData>(`/week${wq}`),
     tryFetch<{ rows: TeamWeekRow[] }>(`/team-week${wq}`),
-    tryFetch<TeamTimeWeek>(`/time-team${twq}`),
+    tryFetch<TimeTeamWeek>(`/time-team${twq}`),
   ]);
 
   if (!data.ok) return <div className="banner error">{data.error}</div>;
