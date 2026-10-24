@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useBusy } from "@/components/Busy";
 
 export default function QuerySelect({
   base,
@@ -18,6 +19,7 @@ export default function QuerySelect({
   options: { value: string; label: string }[];
 }) {
   const router = useRouter();
+  const { startNav } = useBusy();
   return (
     <select
       aria-label={label}
@@ -27,6 +29,7 @@ export default function QuerySelect({
         if (e.target.value) p.set(name, e.target.value);
         else p.delete(name);
         const q = p.toString();
+        startNav();
         router.push(q ? `${base}?${q}` : base);
       }}
     >

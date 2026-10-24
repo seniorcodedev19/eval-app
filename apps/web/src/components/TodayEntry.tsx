@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useBusy } from "@/components/Busy";
 import { call } from "@/lib/client";
 import type { Metric } from "@/lib/types";
 
@@ -18,6 +19,7 @@ export default function TodayEntry({
   editable: boolean;
 }) {
   const router = useRouter();
+  const { startAction, stopAction } = useBusy();
   const start = () => Object.fromEntries(metrics.map((m) => [m.id, daily[m.id]?.[today] === undefined ? "" : String(daily[m.id][today])]));
   const [vals, setVals] = useState<Record<number, string>>(start);
   const [saved, setSaved] = useState<Record<number, string>>(start);
@@ -28,28 +30,31 @@ export default function TodayEntry({
 
   async function saveAll() {
     setBusy(true);
+    startAction();
     setStatus(null);
-    let n = 0;
-    for (const m of metrics) {
-      if (vals[m.id] === saved[m.id]) continue;
-      const num = vals[m.id].trim() === "" ? null : Number(vals[m.id]);
-      if (num !== null && (Number.isNaN(num) || num < 0)) {
-        setStatus({ ok: false, text: `${m.name}: enter a number of 0 or more.` });
-        setBusy(false);
-        return;
+    try {
+      let n = 0;
+      for (const m of metrics) {
+        if (vals[m.id] === saved[m.id]) continue;
+        const num = vals[m.id].trim() === "" ? null : Number(vals[m.id]);
+        if (num !== null && (Number.isNaN(num) || num < 0)) {
+          setStatus({ ok: false, text: `${m.name}: enter a number of 0 or more.` });
+          return;
+        }
+        const r = await call("PUT", "/daily", { metric_id: m.id, entry_date: today, value: num });
+        if (!r.ok) {
+          setStatus({ ok: false, text: `${m.name}: ${r.error}` });
+          return;
+        }
+        n++;
       }
-      const r = await call("PUT", "/daily", { metric_id: m.id, entry_date: today, value: num });
-      if (!r.ok) {
-        setStatus({ ok: false, text: `${m.name}: ${r.error}` });
-        setBusy(false);
-        return;
-      }
-      n++;
+      setSaved(vals);
+      setStatus({ ok: true, text: n ? "Saved." : "Nothing changed." });
+      router.refresh();
+    } finally {
+      setBusy(false);
+      stopAction();
     }
-    setSaved(vals);
-    setBusy(false);
-    setStatus({ ok: true, text: n ? "Saved." : "Nothing changed." });
-    router.refresh();
   }
 
   return (
@@ -73,7 +78,7 @@ export default function TodayEntry({
           </div>
         ))}
         <button className="btn" onClick={saveAll} disabled={!editable || busy}>
-          {busy ? "Saving…" : "Save today"}
+          Save today
         </button>
       </div>
       {!editable && <div className="msg muted">This week is locked, so today can&apos;t be edited.</div>}

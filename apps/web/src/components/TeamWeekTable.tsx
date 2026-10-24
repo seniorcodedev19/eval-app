@@ -154,7 +154,7 @@ export default function TeamWeekTable({
                 {canApprove ? (
                   <td>
                     {r.status === "submitted" && r.report_id && r.user_id !== me.id ? (
-                      <ApproveWeekButton reportId={r.report_id} />
+                      <ApproveWeekButton reportId={r.report_id} withComment={false} />
                     ) : null}
                   </td>
                 ) : null}

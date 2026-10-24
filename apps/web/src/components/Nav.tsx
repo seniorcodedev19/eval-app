@@ -1,6 +1,7 @@
 import { signOut } from "@/auth";
 import type { User } from "@/lib/types";
 import Avatar from "./Avatar";
+import LogoutButton from "./LogoutButton";
 import NavLinks from "./NavLinks";
 import ThemeToggle from "./ThemeToggle";
 
@@ -25,17 +26,15 @@ export default function Nav({ me }: { me: User }) {
           <div className="who-meta">
             <strong>{me.name || me.email}</strong>
             {me.role}
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button className="link" type="submit" style={{ padding: "8px 0" }}>
-                Log out
-              </button>
-            </form>
           </div>
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/" });
+            }}
+          >
+            <LogoutButton />
+          </form>
         </div>
       </div>
     </nav>

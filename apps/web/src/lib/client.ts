@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useBusy } from "@/components/Busy";
 
 export async function call(
   method: string,
@@ -25,16 +26,22 @@ export async function call(
 // Run a request, show its error, refresh server data on success.
 export function useAction() {
   const router = useRouter();
+  const { startAction, stopAction } = useBusy();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const run = async (method: string, path: string, body?: unknown) => {
     setError(null);
     setBusy(true);
-    const r = await call(method, path, body);
-    setBusy(false);
-    if (!r.ok) setError(r.error);
-    else router.refresh();
-    return r.ok;
+    startAction();
+    try {
+      const r = await call(method, path, body);
+      if (!r.ok) setError(r.error);
+      else router.refresh();
+      return r.ok;
+    } finally {
+      setBusy(false);
+      stopAction();
+    }
   };
   return { error, busy, run, setError };
 }

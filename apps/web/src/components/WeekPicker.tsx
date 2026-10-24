@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useBusy } from "@/components/Busy";
 import { addDays, recentWeeks, weekLabel, weekStartOf } from "@/lib/dates";
 
 function href(base: string, extra: Record<string, string>, week: string | undefined, param: string) {
@@ -63,8 +64,13 @@ export default function WeekPicker({
   trailing?: ReactNode;
 }) {
   const router = useRouter();
+  const { startNav } = useBusy();
   const thisWeek = weekStartOf(today);
   const go = (start?: string) => href(base, extra, start, param);
+  const push = (url: string) => {
+    startNav();
+    router.push(url);
+  };
   return (
     <div className="filters" role="group" aria-label="Week">
       <Link className="icon-btn" href={go(addDays(weekStart, -7))} aria-label="Previous week">
@@ -74,7 +80,7 @@ export default function WeekPicker({
         id={selectId ?? param}
         value={weekStart}
         today={today}
-        onChange={(start) => router.push(go(start === thisWeek ? undefined : start))}
+        onChange={(start) => push(go(start === thisWeek ? undefined : start))}
       />
       <Link
         className="icon-btn"

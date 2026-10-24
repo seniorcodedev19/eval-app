@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TeamWeekRow } from "@/lib/types";
 import { fmt } from "@/lib/format";
+import { useBusy } from "./Busy";
 import Accordion from "./Accordion";
 import Avatar from "./Avatar";
 
@@ -57,6 +58,7 @@ function PersonTick({ x, y, payload, index, items }: { x?: string | number; y?: 
 
 export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[]; meId: number; week: string }) {
   const router = useRouter();
+  const { startNav } = useBusy();
   const metrics = useMemo(() => {
     const map = new Map<number, string>();
     for (const r of rows) for (const m of r.metric_points ?? []) map.set(m.id, m.name);
@@ -143,7 +145,10 @@ export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[];
               cursor="pointer"
               onClick={(_d, index) => {
                 const href = items[index]?.href;
-                if (href) router.push(href);
+                if (href) {
+                  startNav();
+                  router.push(href);
+                }
               }}
             >
               {items.map((i) => (

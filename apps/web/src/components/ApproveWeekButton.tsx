@@ -3,9 +3,34 @@
 import { useState } from "react";
 import { useAction } from "@/lib/client";
 
-export default function ApproveWeekButton({ reportId }: { reportId: number }) {
+export default function ApproveWeekButton({
+  reportId,
+  withComment = true,
+}: {
+  reportId: number;
+  withComment?: boolean;
+}) {
   const { error, busy, run } = useAction();
   const [comment, setComment] = useState("");
+
+  if (!withComment) {
+    return (
+      <div>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() => run("POST", `/reports/${reportId}/review`, { decision: "approve", bonus: 0 })}
+        >
+          Approve
+        </button>
+        {error ? (
+          <div className="msg error" role="alert">
+            {error}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="review-bar">

@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
+import { Suspense } from "react";
 import { auth, signOut } from "@/auth";
+import BusyShell from "@/components/Busy";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import { tryFetch } from "@/lib/api";
@@ -30,38 +32,42 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Script id="theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
-        {me ? (
-          <div className="shell">
-            <Nav me={me} />
-            <main className="main">{children}</main>
-          </div>
-        ) : (
-          <main className="main solo">
-            <div className="solo-head">
-              <Link href="/" className="brand" style={{ padding: 0, textDecoration: "none" }}>
-                Eval
-              </Link>
-              <ThemeToggle />
-            </div>
-            {error ? (
-              <div className="banner error" role="alert">
-                <strong>Can&apos;t load your account.</strong> {error}
-                <form
-                  action={async () => {
-                    "use server";
-                    await signOut({ redirectTo: "/login" });
-                  }}
-                >
-                  <button className="btn secondary" type="submit" style={{ marginTop: 10 }}>
-                    Sign out
-                  </button>
-                </form>
+        <Suspense fallback={null}>
+          <BusyShell>
+            {me ? (
+              <div className="shell">
+                <Nav me={me} />
+                <main className="main">{children}</main>
               </div>
             ) : (
-              children
+              <main className="main solo">
+                <div className="solo-head">
+                  <Link href="/" className="brand" style={{ padding: 0, textDecoration: "none" }}>
+                    Eval
+                  </Link>
+                  <ThemeToggle />
+                </div>
+                {error ? (
+                  <div className="banner error" role="alert">
+                    <strong>Can&apos;t load your account.</strong> {error}
+                    <form
+                      action={async () => {
+                        "use server";
+                        await signOut({ redirectTo: "/login" });
+                      }}
+                    >
+                      <button className="btn secondary" type="submit" style={{ marginTop: 10 }}>
+                        Sign out
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  children
+                )}
+              </main>
             )}
-          </main>
-        )}
+          </BusyShell>
+        </Suspense>
       </body>
     </html>
   );
