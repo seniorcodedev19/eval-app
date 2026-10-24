@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminPanels from "@/components/AdminPanels";
 import MetricsManager from "@/components/MetricsManager";
-import ReviewQueue from "@/components/ReviewQueue";
-import { apiFetch, tryFetch } from "@/lib/api";
-import type { AuditPage, Metric, QueueItem, Team, User } from "@/lib/types";
+import { apiFetch } from "@/lib/api";
+import type { AuditPage, Metric, Team, User } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
@@ -16,11 +15,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const page = Math.max(1, Number(sp.page) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [users, teams, metrics, queue, audit] = await Promise.all([
+  const [users, teams, metrics, audit] = await Promise.all([
     apiFetch<User[]>("/users"),
     apiFetch<Team[]>("/teams"),
     apiFetch<Metric[]>("/metrics"),
-    tryFetch<QueueItem[]>("/review-queue"),
     apiFetch<AuditPage>(`/audit?limit=${PAGE_SIZE}&offset=${offset}`),
   ]);
 
@@ -30,10 +28,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <h1>Admin</h1>
-      <p className="sub">People, teams, metrics, and weekly reviews.</p>
-
-      <h2>Waiting for review</h2>
-      {queue.ok ? <ReviewQueue items={queue.data} /> : <div className="banner error">{queue.error}</div>}
+      <p className="sub">People, teams, and metrics.</p>
 
       <AdminPanels me={me} users={users} teams={teams} />
 

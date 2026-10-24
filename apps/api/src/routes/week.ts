@@ -160,7 +160,7 @@ week.get("/review-queue", requireRole("manager", "admin"), h(async (req, res) =>
   const { rows } = await pool.query(
     `select r.id as report_id, r.user_id, r.week_start, r.summary, r.submitted_at, u.name, u.email, u.avatar, u.team_id
      from weekly_reports r join users u on u.id = r.user_id
-     where r.status = 'submitted' and u.id <> $1 and ($2::boolean or u.team_id = $3)
+     where r.status = 'submitted' and u.role <> 'admin' and u.id <> $1 and ($2::boolean or u.team_id = $3)
      order by r.submitted_at`,
     [actor.id, actor.role === "admin", actor.team_id],
   );
@@ -275,18 +275,18 @@ week.patch("/week/status", requireRole("admin"), h(async (req, res) => {
 }));
 
 async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
-  const teamId = actor.role === "admin" ? (teamIdParam ?? null) : actor.team_id;
-  if (teamId === null && actor.role !== "admin") return [];
+  const teamId = actor.role === "admin" ? (teamIdParam ?? null) : null;
   const { rows: users } = await pool.query<User & { team_name: string | null }>(
     `select u.id, u.email, u.name, u.role, u.team_id, u.active, u.avatar, t.name as team_name
      from users u left join teams t on t.id = u.team_id
-     where u.active and ($1::int is null or u.team_id = $1) order by u.name, u.email`,
+     where u.active and u.role <> 'admin' and ($1::int is null or u.team_id = $1) order by u.name, u.email`,
     [teamId],
   );
   const rows = [];
   for (const u of users) {
     const s = await weekSnapshot(u, ws);
     const status = s.report?.status ?? "draft";
+    const units = new Map(s.metrics.map((m) => [m.id, m.unit]));
     const metric_points = Object.values(
       s.score.breakdown.reduce<
         Record<
@@ -300,6 +300,7 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
             ratio: number | null;
             weight: number;
             formula_type: string;
+            unit: string;
           }
         >
       >((acc, b) => {
@@ -313,6 +314,7 @@ async function teamWeekRows(actor: User, ws: string, teamIdParam?: number) {
           ratio: null as number | null,
           weight: Number(b.weight),
           formula_type: b.formula_type,
+          unit: units.get(b.metric_id) ?? "",
         };
         cur.points += Number(b.contribution);
         cur.done += Number(b.done);

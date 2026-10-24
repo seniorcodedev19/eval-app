@@ -28,7 +28,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   if (!data.ok) return <div className="banner error">{data.error}</div>;
   const d = data.data;
-  const rows = team.ok ? team.data.rows : [];
+  const rows = team.ok ? team.data.rows.filter((r) => r.role !== "admin") : [];
 
   return (
     <>
@@ -82,7 +82,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           {!team.ok ? (
             <div className="banner error">{team.error}</div>
           ) : (
-            <TeamWeekTable me={me} weekStart={d.week_start} rows={rows} />
+            <TeamWeekTable me={me} weekStart={d.week_start} rows={rows} metrics={d.metrics} />
           )}
         </Accordion>
       </div>

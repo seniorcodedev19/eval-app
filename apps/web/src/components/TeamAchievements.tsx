@@ -20,12 +20,13 @@ export default function TeamAchievements({
   weekStart: string;
   rows: TeamWeekRow[];
 }) {
-  if (rows.length === 0) return <div className="empty">No active people in this team yet.</div>;
-  const metrics = metricsOf(rows);
+  const people = rows.filter((r) => r.role !== "admin");
+  if (people.length === 0) return <div className="empty">No active people in this team yet.</div>;
+  const metrics = metricsOf(people);
 
   return (
     <div>
-      {rows.map((r) => {
+      {people.map((r) => {
         const byId = new Map((r.metric_points ?? []).map((m) => [m.id, m]));
         return (
           <Accordion

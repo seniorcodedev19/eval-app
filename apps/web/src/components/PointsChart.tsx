@@ -9,8 +9,14 @@ function shortName(name: string) {
   return parts[0] || name;
 }
 
-function metricValue(r: TeamWeekRow, metricId: number) {
-  return r.metric_points?.find((m) => m.id === metricId)?.points ?? 0;
+function metricDone(r: TeamWeekRow, metricId: number) {
+  return r.metric_points?.find((m) => m.id === metricId)?.done ?? 0;
+}
+
+function chartUnit(unit?: string) {
+  if (!unit) return "";
+  if (unit === "hours") return " h";
+  return ` ${unit}`;
 }
 
 export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[]; meId: number; week: string }) {
@@ -28,16 +34,20 @@ export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[];
       return (a.team_name ?? "zzz").localeCompare(b.team_name ?? "zzz") || a.name.localeCompare(b.name);
     }
     if (metricId !== null) {
-      return metricValue(b, metricId) - metricValue(a, metricId) || a.name.localeCompare(b.name);
+      return metricDone(b, metricId) - metricDone(a, metricId) || a.name.localeCompare(b.name);
     }
     if (sort === "total_asc") return a.total - b.total || a.name.localeCompare(b.name);
     return b.total - a.total || a.name.localeCompare(b.name);
   });
 
   const metricName = metrics.find((m) => m.id === metricId)?.name;
+  const metricUnit =
+    metricId === null
+      ? ""
+      : chartUnit(rows.map((r) => r.metric_points?.find((m) => m.id === metricId)?.unit).find(Boolean));
   const items = sorted.map((r) => ({
     label: sort === "team" && r.team_name ? `${shortName(r.name)} · ${r.team_name}` : shortName(r.name),
-    value: metricId !== null ? metricValue(r, metricId) : r.total,
+    value: metricId !== null ? metricDone(r, metricId) : r.total,
     highlight: r.user_id === meId,
     tone: (r.status === "approved" ? "ok" : r.status === "submitted" ? "wait" : "muted") as "ok" | "wait" | "muted",
     href: `/team/${r.user_id}?week=${week}`,
@@ -63,6 +73,7 @@ export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[];
       <ColumnChart
         className="people"
         items={items}
+        unit={metricId !== null ? metricUnit : ""}
         label={metricName ? `${metricName} this week` : "Everyone's points this week"}
       />
     </>

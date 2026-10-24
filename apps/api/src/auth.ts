@@ -52,11 +52,9 @@ export function requireRole(...roles: Role[]) {
   };
 }
 
-// Who may see / edit a given user's data.
-export function canView(actor: User, target: { id: number; team_id: number | null }) {
-  if (actor.role === "admin") return true;
-  if (actor.id === target.id) return true;
-  return actor.role === "manager" && actor.team_id !== null && actor.team_id === target.team_id;
+// Who may see / edit a given user's data. Everyone in the project can see status and results.
+export function canView(_actor: User, _target: { id: number; team_id: number | null }) {
+  return true;
 }
 
 export function canEdit(actor: User, target: { id: number; team_id: number | null }) {

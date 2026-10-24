@@ -111,7 +111,7 @@ async function teamRows(actor: User, periodId: number, teamIdParam?: number) {
   const period = await getPeriod(periodId);
   const { rows: users } = await pool.query<User>(
     `select id, email, name, role, team_id, active from users
-     where active and ($1::int is null or team_id = $1) order by name, email`,
+     where active and role <> 'admin' and ($1::int is null or team_id = $1) order by name, email`,
     [teamId],
   );
   const result = [];

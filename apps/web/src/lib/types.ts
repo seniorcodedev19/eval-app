@@ -118,6 +118,7 @@ export interface TeamWeekRow {
     ratio?: number | null;
     weight?: number;
     formula_type?: FormulaType;
+    unit?: string;
   }[];
 }
 export interface QueueItem {

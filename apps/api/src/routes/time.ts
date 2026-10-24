@@ -79,14 +79,10 @@ time.delete("/time/:id", h(async (req, res) => {
 
 // Hours per person per day for a week.
 time.get("/time-team", h(async (req, res) => {
-  const actor = req.user!;
   const q = z.object({ week_start: z.string().optional() }).parse(req.query);
   const ws = parseWeek(q.week_start);
   const days = weekDays(ws);
-  const teamId = actor.role === "admin" ? null : actor.team_id;
-  if (teamId === null && actor.role !== "admin") {
-    return res.json({ week_start: ws, week_end: days[6], today: todayUtc(), days, rows: [] });
-  }
+  const teamId = null;
   const { rows } = await pool.query<{
     user_id: number;
     name: string;
@@ -99,7 +95,7 @@ time.get("/time-team", h(async (req, res) => {
             t.log_date, coalesce(sum(t.minutes),0)::int as minutes
      from users u
      left join time_logs t on t.user_id = u.id and t.log_date between $1 and $2
-     where u.active and ($3::int is null or u.team_id = $3)
+     where u.active and u.role <> 'admin' and ($3::int is null or u.team_id = $3)
      group by u.id, t.log_date
      order by name`,
     [days[0], days[6], teamId],

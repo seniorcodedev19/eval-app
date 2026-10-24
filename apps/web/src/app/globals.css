@@ -229,6 +229,45 @@ th { font-weight: 500; color: var(--muted); font-size: 13px; }
 td.n, th.n { text-align: right; }
 tbody tr:last-child td { border-bottom: 0; }
 .tablewrap { overflow-x: auto; max-width: 100%; }
+.matrix { min-width: 100%; }
+.matrix th.metric {
+  white-space: normal;
+  min-width: 72px;
+  max-width: 120px;
+  font-size: 12px;
+  line-height: 1.25;
+  vertical-align: bottom;
+}
+.matrix th, .matrix td { padding: 8px 8px; }
+.matrix .person-col {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 1;
+  min-width: 168px;
+}
+.matrix thead .person-col { z-index: 2; }
+.matrix tr.me td { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.matrix tr.me .person-col { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.sort-th {
+  font: inherit;
+  font-weight: 500;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: inherit;
+  gap: 4px;
+  text-align: inherit;
+  width: 100%;
+}
+.sort-th:hover { color: var(--ink); }
+.sort-th.on { color: var(--ink); }
+.sort-mark { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.sort-th.on .sort-mark { color: var(--accent); }
 .panel { max-width: 100%; }
 
 label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
