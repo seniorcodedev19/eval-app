@@ -6,16 +6,19 @@ export default function Accordion({
   title,
   children,
   open = true,
+  actions,
 }: {
   title: ReactNode;
   children: ReactNode;
   open?: boolean;
+  actions?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(open);
   return (
     <div className="panel accordion">
       <div className="accordion-bar">
         <div className="accordion-head">{title}</div>
+        {actions}
         <button type="button" className="accordion-toggle" onClick={() => setExpanded((v) => !v)}>
           {expanded ? "Hide" : "Show"}
         </button>

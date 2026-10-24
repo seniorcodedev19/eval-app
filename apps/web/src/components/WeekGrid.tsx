@@ -63,9 +63,13 @@ export default function WeekGrid({ data }: { data: WeekData }) {
   return (
     <div className="panel">
       <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
-        <legend style={{ padding: 0, marginBottom: 12, fontWeight: 600 }}>Weekly results</legend>
+        <div className="head" style={{ marginBottom: 12, alignItems: "center" }}>
+          <legend style={{ padding: 0, margin: 0, fontWeight: 600 }}>Weekly results</legend>
+          <div className="filters">
+            <WeekSelect id="report-week" label="Reporting week" value={data.week_start} today={data.today} onChange={goToWeek} />
+          </div>
+        </div>
         <div className="stack">
-          <WeekSelect id="report-week" label="Reporting week" value={data.week_start} today={data.today} onChange={goToWeek} />
           {data.metrics.map((m) => {
             const tracking = isTimeTracking(m);
             const done = tracking ? data.time_hours ?? 0 : Number(vals[m.id]) || 0;

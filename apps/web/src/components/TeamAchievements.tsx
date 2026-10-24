@@ -20,8 +20,8 @@ export default function TeamAchievements({
   weekStart: string;
   rows: TeamWeekRow[];
 }) {
-  const people = rows.filter((r) => r.role !== "admin");
-  if (people.length === 0) return <div className="empty">No active people in this team yet.</div>;
+  const people = rows.filter((r) => r.role !== "admin" && r.status === "submitted");
+  if (people.length === 0) return <div className="empty">Nothing waiting for review this week.</div>;
   const metrics = metricsOf(people);
 
   return (
@@ -110,10 +110,8 @@ export default function TeamAchievements({
                 </table>
               </div>
             )}
-            {me.role !== "member" && r.status === "submitted" && r.report_id && r.user_id !== me.id ? (
-              <div style={{ marginTop: 12 }}>
-                <ApproveWeekButton reportId={r.report_id} />
-              </div>
+            {me.role === "admin" && r.report_id && r.user_id !== me.id ? (
+              <ApproveWeekButton reportId={r.report_id} />
             ) : null}
           </Accordion>
         );

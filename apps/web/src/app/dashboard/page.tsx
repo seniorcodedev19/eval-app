@@ -1,7 +1,6 @@
 import Accordion from "@/components/Accordion";
 import Breakdown from "@/components/Breakdown";
 import PointsChart from "@/components/PointsChart";
-import RankBars from "@/components/RankBars";
 import StatusPill from "@/components/StatusPill";
 import TeamTimeChart from "@/components/TeamTimeChart";
 import TeamWeekTable from "@/components/TeamWeekTable";
@@ -66,15 +65,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       )}
 
       <div style={{ marginBottom: 12 }}>
-        <Accordion title="Everyone's points">
-          {!team.ok ? (
+        {!team.ok ? (
+          <Accordion title="Everyone's points">
             <div className="banner error">{team.error}</div>
-          ) : rows.length === 0 ? (
+          </Accordion>
+        ) : rows.length === 0 ? (
+          <Accordion title="Everyone's points">
             <div className="empty">No people to chart yet this week.</div>
-          ) : (
-            <PointsChart rows={rows} meId={me.id} week={d.week_start} />
-          )}
-        </Accordion>
+          </Accordion>
+        ) : (
+          <PointsChart rows={rows} meId={me.id} week={d.week_start} />
+        )}
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -109,10 +110,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Accordion>
         </div>
       )}
-
-      <Accordion title="Leaderboard">
-        {team.ok ? <RankBars rows={rows} week={d.week_start} /> : <div className="banner error">{team.error}</div>}
-      </Accordion>
     </>
   );
 }

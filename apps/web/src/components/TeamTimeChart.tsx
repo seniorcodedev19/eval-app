@@ -21,8 +21,9 @@ export default function TeamTimeChart({
   }));
 
   return (
-    <Accordion title="Everyone's hours">
-      <div style={{ marginBottom: 14 }}>
+    <Accordion
+      title="Everyone's hours"
+      actions={
         <WeekPicker
           base="/dashboard"
           param="time_week"
@@ -32,7 +33,8 @@ export default function TeamTimeChart({
           today={data.today}
           extra={extra}
         />
-      </div>
+      }
+    >
       {series.length === 0 ? (
         <div className="empty">No people to chart yet this week.</div>
       ) : (

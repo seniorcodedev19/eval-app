@@ -55,7 +55,7 @@ export default async function PersonPage({
             </p>
           </div>
         </div>
-        <div className="row" style={{ alignItems: "center" }}>
+        <div className="head-actions">
           <ReportStatusControl
             userId={person.id}
             weekStart={d.week_start}

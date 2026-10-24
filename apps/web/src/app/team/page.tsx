@@ -32,7 +32,7 @@ export default async function TeamPage({
         <div>
           <h1>Team</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Each person&rsquo;s metrics for this week. Open a name for the daily form and trend.
+            People waiting for review this week. Open a name for the daily form and trend.
           </p>
         </div>
         <WeekPicker
