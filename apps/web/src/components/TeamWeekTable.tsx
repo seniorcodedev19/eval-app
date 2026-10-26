@@ -95,6 +95,20 @@ export default function TeamWeekTable({
     });
   }, [people, sort, dir]);
 
+  const totals = useMemo(() => {
+    const metricSums = Object.fromEntries(cols.map((m) => [m.id, 0]));
+    let points = 0;
+    for (const r of people) {
+      if (!r.has_data) continue;
+      points += r.total;
+      for (const m of cols) {
+        const v = metricDone(r, m.id);
+        if (v !== null) metricSums[m.id] += v;
+      }
+    }
+    return { metricSums, points };
+  }, [people, cols]);
+
   if (people.length === 0) return <div className="empty">No people to show yet this week.</div>;
 
   return (
@@ -162,6 +176,23 @@ export default function TeamWeekTable({
             );
           })}
         </tbody>
+        <tfoot>
+          <tr>
+            <td className="person-col">
+              <strong>Total</strong>
+            </td>
+            <td />
+            {cols.map((m) => (
+              <td key={m.id} className="n">
+                <strong>{fmt(totals.metricSums[m.id] ?? 0)}</strong>
+              </td>
+            ))}
+            <td className="n">
+              <strong>{fmt(totals.points)}</strong>
+            </td>
+            {canApprove ? <td /> : null}
+          </tr>
+        </tfoot>
       </table>
     </div>
   );

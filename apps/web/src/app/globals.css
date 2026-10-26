@@ -269,6 +269,12 @@ tbody tr:last-child td { border-bottom: 0; }
   min-width: 168px;
 }
 .matrix thead .person-col { z-index: 2; }
+.matrix tfoot td {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
+}
+.matrix tfoot .person-col { z-index: 2; background: var(--canvas); }
 .matrix tr.me td { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .matrix tr.me .person-col { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .sort-th {
