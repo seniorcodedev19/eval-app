@@ -197,6 +197,35 @@ export interface AuditRow {
   entity_id: string | null;
   actor: string | null;
 }
+export interface SlackStatus {
+  connected: boolean;
+  slack_user_id: string | null;
+  slack_team_id: string | null;
+  connected_at: string | null;
+  openai_configured: boolean;
+}
+export interface SlackInstallStatus {
+  installed: boolean;
+  slack_oauth: boolean;
+  client_id: string;
+  has_secret: boolean;
+  has_signing_secret: boolean;
+  has_app_token: boolean;
+  workspaces: { slack_team_id: string; bot_user_id: string | null; installed_at: string }[];
+}
+export interface AgentConversation {
+  id: number;
+  title: string;
+  source: string;
+  updated_at: string;
+  messages?: AgentChatMessage[];
+}
+export interface AgentChatMessage {
+  id?: number;
+  role: "user" | "assistant" | "tool";
+  content: string;
+  tool_name?: string | null;
+}
 export interface AuditPage {
   rows: AuditRow[];
   total: number;

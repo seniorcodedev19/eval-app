@@ -108,6 +108,16 @@ a { color: inherit; }
 .side a.link svg { flex-shrink: 0; }
 .side a.link:hover, .side button.link:hover { background: var(--canvas); color: var(--ink); }
 .side a.link[aria-current="page"] { background: var(--canvas); color: var(--ink); font-weight: 600; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-sub { display: flex; flex-direction: column; gap: 2px; padding: 0 0 4px 18px; }
+.side a.link.sub { padding: 6px 10px; font-size: 13px; }
+.nav-caret {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.nav-caret.open { transform: rotate(90deg); }
 .side-footer {
   margin-top: auto;
   padding: 12px 10px 0;
@@ -533,6 +543,113 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
 .stack > * + * { margin-top: 12px; }
 .item { border-top: 1px solid var(--line); padding: 16px 0; }
 .item:first-child { border-top: 0; padding-top: 0; }
+
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal {
+  width: min(520px, 100%);
+  max-height: min(90dvh, 720px);
+  overflow: auto;
+  margin: 0;
+}
+.agent-settings-section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.agent-settings-section:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+.agent-settings-section h3 { margin: 0 0 6px; font-size: 15px; }
+.agent-settings-section input { width: 100%; margin-bottom: 12px; }
+.agent-chat-empty { text-align: center; padding: 48px 20px; }
+.agent-chat-empty strong { display: block; margin-bottom: 8px; }
+.agent-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  min-height: min(70dvh, 640px);
+  align-items: stretch;
+}
+.agent-threads {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+}
+.agent-threads ul { list-style: none; margin: 12px 0 0; padding: 0; }
+.agent-thread {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-thread:hover, .agent-thread.on { background: var(--canvas); }
+.agent-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.agent-log { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.agent-bubble { max-width: 80%; white-space: pre-wrap; padding: 8px 12px; border-radius: 8px; }
+.agent-bubble.user { align-self: flex-end; background: var(--canvas); }
+.agent-bubble.assistant { align-self: flex-start; background: color-mix(in srgb, var(--accent) 10%, var(--canvas)); }
+.agent-bubble.tool { align-self: flex-start; font-size: 13px; }
+.agent-compose {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+.agent-compose input { flex: 1; width: auto; }
+.agent-typing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  color: var(--muted);
+  font-size: 14px;
+}
+.agent-bot-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 16%, var(--canvas));
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.agent-typing-text::after {
+  content: "…";
+  animation: agent-ellipsis 1.2s steps(4, end) infinite;
+}
+@keyframes agent-ellipsis {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "…"; }
+}
+@media (max-width: 800px) {
+  .agent-shell { grid-template-columns: 1fr; min-height: 70dvh; }
+  .agent-threads { max-height: 160px; }
+}
 
 /* landing */
 .hero { padding: 8vh 0 32px; max-width: 720px; }

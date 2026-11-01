@@ -25,6 +25,10 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[]
   headers.set("Content-Type", res.headers.get("Content-Type") ?? "application/json");
   const disposition = res.headers.get("Content-Disposition");
   if (disposition) headers.set("Content-Disposition", disposition);
+  if (headers.get("Content-Type")?.includes("text/event-stream")) {
+    headers.set("Cache-Control", "no-cache");
+    return new NextResponse(res.body, { status: res.status, headers });
+  }
   return new NextResponse(await res.text(), { status: res.status, headers });
 }
 

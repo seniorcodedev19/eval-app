@@ -2,7 +2,7 @@ export function Icon({
   name,
   size = 18,
 }: {
-  name: "dashboard" | "team" | "time" | "interviews" | "profile" | "admin" | "logout";
+  name: "dashboard" | "team" | "time" | "interviews" | "profile" | "admin" | "logout" | "agent";
   size?: number;
 }) {
   const common = {
@@ -60,6 +60,14 @@ export function Icon({
         <svg {...common}>
           <circle cx="12" cy="12" r="3" />
           <path d="M12 3.5v2.2M12 18.3v2.2M4.9 6.5l1.9 1.1M17.2 16.4l1.9 1.1M3.5 12h2.2M18.3 12h2.2M4.9 17.5l1.9-1.1M17.2 7.6l1.9-1.1" />
+        </svg>
+      );
+    case "agent":
+      return (
+        <svg {...common}>
+          <rect x="4" y="6" width="16" height="12" rx="3" />
+          <path d="M8 10h.01M12 10h.01M16 10h.01" />
+          <path d="M9 18v3l3-3" />
         </svg>
       );
     case "logout":

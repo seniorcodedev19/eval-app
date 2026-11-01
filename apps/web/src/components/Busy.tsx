@@ -86,7 +86,11 @@ export default function BusyShell({ children }: { children: ReactNode }) {
         /* ignore */
       }
     };
-    const onSubmit = () => startNav();
+    const onSubmit = (e: Event) => {
+      const form = e.target as HTMLElement | null;
+      if (form?.closest?.("[data-busy=local]")) return;
+      startNav();
+    };
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", remember, true);
     document.addEventListener("submit", onSubmit, true);
