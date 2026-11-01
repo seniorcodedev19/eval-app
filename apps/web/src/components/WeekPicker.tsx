@@ -47,7 +47,6 @@ export function WeekSelect({
 export default function WeekPicker({
   base,
   weekStart,
-  weekEnd,
   today,
   extra = {},
   param = "week",

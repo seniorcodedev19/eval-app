@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAction } from "@/lib/client";
 import type { SlackStatus } from "@/lib/types";
 
@@ -10,22 +10,21 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
   const [apiKey, setApiKey] = useState("");
   const [token, setToken] = useState("");
 
-  useEffect(() => {
-    if (!open) {
-      setApiKey("");
-      setToken("");
-      setError(null);
-    }
-  }, [open, setError]);
+  const close = useCallback(() => {
+    setOpen(false);
+    setApiKey("");
+    setToken("");
+    setError(null);
+  }, [setError]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, close]);
 
   return (
     <>
@@ -33,7 +32,7 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
         Agent settings
       </button>
       {open ? (
-        <div className="modal-back" onClick={() => setOpen(false)} role="presentation">
+        <div className="modal-back" onClick={close} role="presentation">
           <div
             className="modal panel"
             role="dialog"
@@ -45,7 +44,7 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
               <h2 id="agent-settings-title" style={{ margin: 0 }}>
                 Agent settings
               </h2>
-              <button type="button" className="btn secondary" onClick={() => setOpen(false)}>
+              <button type="button" className="btn secondary" onClick={close}>
                 Close
               </button>
             </div>

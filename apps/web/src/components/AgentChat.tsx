@@ -68,8 +68,14 @@ export default function AgentChat() {
   const refreshList = useCallback(async () => setList(await loadList()), []);
 
   useEffect(() => {
-    void refreshList();
-  }, [refreshList]);
+    let live = true;
+    void loadList().then((rows) => {
+      if (live) setList(rows);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
