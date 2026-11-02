@@ -183,6 +183,14 @@ a { color: inherit; }
   max-width: none;
   padding: 28px clamp(16px, 2.4vw, 56px) 64px;
 }
+.main:has(.agent-page) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding-bottom: 28px;
+}
 .main.solo {
   max-width: 1120px;
   margin-inline: auto;
@@ -339,17 +347,6 @@ input[type="checkbox"] { width: 18px; height: 18px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner { animation: spin 0.7s linear infinite; display: block; }
-.is-busy::before {
-  content: "";
-  width: 12px;
-  height: 12px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  flex-shrink: 0;
-  display: inline-block;
-}
 .route-bar {
   position: fixed;
   top: 0;
@@ -563,13 +560,22 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
 .agent-settings-section:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
 .agent-settings-section h3 { margin: 0 0 6px; font-size: 15px; }
 .agent-settings-section input { width: 100%; margin-bottom: 12px; }
+.agent-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+.agent-page .head { flex-shrink: 0; }
 .agent-chat-empty { text-align: center; padding: 48px 20px; }
 .agent-chat-empty strong { display: block; margin-bottom: 8px; }
 .agent-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 12px;
-  min-height: min(70dvh, 640px);
+  flex: 1;
+  min-height: 0;
   align-items: stretch;
 }
 .agent-threads {
@@ -577,6 +583,7 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
+  min-height: 0;
   overflow: auto;
 }
 .agent-threads ul { list-style: none; margin: 12px 0 0; padding: 0; }
@@ -600,11 +607,22 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.agent-log { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.agent-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .agent-bubble { max-width: 80%; white-space: pre-wrap; padding: 8px 12px; border-radius: 8px; }
 .agent-bubble.user { align-self: flex-end; background: var(--canvas); }
 .agent-bubble.assistant { align-self: flex-start; background: color-mix(in srgb, var(--accent) 10%, var(--canvas)); }
@@ -614,6 +632,7 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
   gap: 8px;
   padding: 12px;
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .agent-compose input { flex: 1; width: auto; }
 .agent-typing {
@@ -646,8 +665,8 @@ textarea { width: 100%; min-height: 80px; resize: vertical; }
   75% { content: "…"; }
 }
 @media (max-width: 800px) {
-  .agent-shell { grid-template-columns: 1fr; min-height: 70dvh; }
-  .agent-threads { max-height: 160px; }
+  .agent-shell { grid-template-columns: 1fr; grid-template-rows: 140px minmax(0, 1fr); }
+  .agent-threads { max-height: none; }
 }
 
 /* landing */

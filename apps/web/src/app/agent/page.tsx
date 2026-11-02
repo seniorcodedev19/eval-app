@@ -21,7 +21,7 @@ export default async function AgentPage({
   const status: SlackStatus = slack.ok ? { ...emptyStatus, ...slack.data } : emptyStatus;
 
   return (
-    <>
+    <div className="agent-page">
       <div className="head">
         <div>
           <h1>Agent</h1>
@@ -37,6 +37,6 @@ export default async function AgentPage({
       {sp.slack === "connected" ? <div className="banner note">Slack is connected for your agent.</div> : null}
       {sp.slack === "error" ? <div className="banner error">{sp.slack_error || "Slack connect failed"}</div> : null}
       <AgentChat />
-    </>
+    </div>
   );
 }

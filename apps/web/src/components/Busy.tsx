@@ -25,28 +25,14 @@ export function useBusy() {
 export default function BusyShell({ children }: { children: ReactNode }) {
   const [nav, setNav] = useState(false);
   const [actions, setActions] = useState(0);
-  const last = useRef<HTMLElement | null>(null);
-  const marked = useRef<HTMLElement | null>(null);
   const busy = nav || actions > 0;
   const pathname = usePathname();
   const search = useSearchParams();
   const key = `${pathname}?${search.toString()}`;
   const prev = useRef(key);
 
-  const mark = (el: HTMLElement | null) => {
-    if (marked.current && marked.current !== el) marked.current.classList.remove("is-busy");
-    marked.current = el;
-    el?.classList.add("is-busy");
-  };
-
-  const startNav = useCallback(() => {
-    mark(last.current);
-    setNav(true);
-  }, []);
-  const startAction = useCallback(() => {
-    mark(last.current);
-    setActions((n) => n + 1);
-  }, []);
+  const startNav = useCallback(() => setNav(true), []);
+  const startAction = useCallback(() => setActions((n) => n + 1), []);
   const stopAction = useCallback(() => setActions((n) => Math.max(0, n - 1)), []);
 
   useEffect(() => {
@@ -56,20 +42,7 @@ export default function BusyShell({ children }: { children: ReactNode }) {
   }, [key]);
 
   useEffect(() => {
-    if (!busy && marked.current) {
-      marked.current.classList.remove("is-busy");
-      marked.current = null;
-    }
-  }, [busy]);
-
-  useEffect(() => {
-    const remember = (e: Event) => {
-      const t = e.target as HTMLElement | null;
-      if (!t) return;
-      last.current = t.closest("button, a, select") as HTMLElement | null;
-    };
     const onClick = (e: MouseEvent) => {
-      remember(e);
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const a = (e.target as HTMLElement).closest("a");
       if (!a) return;
@@ -80,7 +53,6 @@ export default function BusyShell({ children }: { children: ReactNode }) {
         const url = new URL(href, window.location.href);
         if (url.origin !== window.location.origin) return;
         if (url.pathname + url.search === window.location.pathname + window.location.search) return;
-        last.current = a;
         startNav();
       } catch {
         /* ignore */
@@ -92,11 +64,9 @@ export default function BusyShell({ children }: { children: ReactNode }) {
       startNav();
     };
     document.addEventListener("click", onClick, true);
-    document.addEventListener("change", remember, true);
     document.addEventListener("submit", onSubmit, true);
     return () => {
       document.removeEventListener("click", onClick, true);
-      document.removeEventListener("change", remember, true);
       document.removeEventListener("submit", onSubmit, true);
     };
   }, [startNav]);
