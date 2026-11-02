@@ -108,9 +108,8 @@ a { color: inherit; }
 .side a.link svg { flex-shrink: 0; }
 .side a.link:hover, .side button.link:hover { background: var(--canvas); color: var(--ink); }
 .side a.link[aria-current="page"] { background: var(--canvas); color: var(--ink); font-weight: 600; }
-.nav-group { display: flex; flex-direction: column; gap: 2px; }
-.nav-sub { display: flex; flex-direction: column; gap: 2px; padding: 0 0 4px 18px; }
-.side a.link.sub { padding: 6px 10px; font-size: 13px; }
+.nav-group, .nav-sub { display: flex; flex-direction: column; gap: 2px; }
+.nav-sub { margin-left: 18px; }
 .nav-caret {
   margin-left: auto;
   font-size: 12px;

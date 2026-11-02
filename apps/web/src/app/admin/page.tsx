@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AdminPanels from "@/components/AdminPanels";
-import MetricsManager from "@/components/MetricsManager";
 import { apiFetch } from "@/lib/api";
-import type { AuditPage, Metric, Team, User } from "@/lib/types";
+import type { AuditPage, User } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
@@ -15,12 +13,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const page = Math.max(1, Number(sp.page) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [users, teams, metrics, audit] = await Promise.all([
-    apiFetch<User[]>("/users"),
-    apiFetch<Team[]>("/teams"),
-    apiFetch<Metric[]>("/metrics"),
-    apiFetch<AuditPage>(`/audit?limit=${PAGE_SIZE}&offset=${offset}`),
-  ]);
+  const audit = await apiFetch<AuditPage>(`/audit?limit=${PAGE_SIZE}&offset=${offset}`);
 
   const pages = Math.max(1, Math.ceil(audit.total / audit.limit));
   const current = Math.min(page, pages);
@@ -28,17 +21,21 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <h1>Admin</h1>
-      <p className="sub">People, teams, and metrics.</p>
+      <p className="sub">Users, metrics, and Slack live in the Admin submenu. Recent account changes are below.</p>
 
-      <AdminPanels me={me} users={users} teams={teams} />
+      <div className="row" style={{ marginBottom: 28, flexWrap: "wrap" }}>
+        <Link className="btn secondary" href="/admin/users">
+          Users
+        </Link>
+        <Link className="btn secondary" href="/admin/metrics">
+          Metrics
+        </Link>
+        <Link className="btn secondary" href="/admin/agent">
+          Agent connect
+        </Link>
+      </div>
 
-      <h2>Metrics</h2>
-      <p className="sub" style={{ marginTop: -4 }}>
-        Weight and target changes apply to weeks that aren&apos;t approved yet.
-      </p>
-      <MetricsManager me={me} metrics={metrics} teams={teams} />
-
-      <div className="head" style={{ marginTop: 32 }}>
+      <div className="head">
         <h2 style={{ margin: 0 }}>Recent changes</h2>
         {audit.total > 0 && (
           <div className="row" style={{ alignItems: "center" }}>

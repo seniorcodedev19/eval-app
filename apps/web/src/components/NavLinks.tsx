@@ -15,6 +15,8 @@ const icons = {
   "/agent": "agent",
   "/profile": "profile",
   "/admin": "admin",
+  "/admin/users": "team",
+  "/admin/metrics": "metrics",
   "/admin/agent": "agent",
 } as const;
 
@@ -60,10 +62,10 @@ export default function NavLinks({ links }: { links: NavItem[] }) {
                     <Link
                       key={c.href}
                       href={c.href}
-                      className="link sub"
+                      className="link"
                       aria-current={isCurrent(c.href, path) ? "page" : undefined}
                     >
-                      {childIcon ? <Icon name={childIcon} size={16} /> : null}
+                      {childIcon ? <Icon name={childIcon} /> : null}
                       <span>{c.label}</span>
                     </Link>
                   );

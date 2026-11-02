@@ -19,7 +19,11 @@ export default function Nav({ me }: { me: User }) {
     links.push({
       href: "/admin",
       label: "Admin",
-      children: [{ href: "/admin/agent", label: "Agent connect" }],
+      children: [
+        { href: "/admin/users", label: "Users" },
+        { href: "/admin/metrics", label: "Metrics" },
+        { href: "/admin/agent", label: "Agent connect" },
+      ],
     });
   }
 
