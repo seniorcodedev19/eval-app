@@ -64,6 +64,8 @@ export async function startSlackSocket() {
           ws?.send(JSON.stringify({ envelope_id: msg.envelope_id }));
         }
         if (msg.type === "events_api" && msg.payload) {
+          const ev = msg.payload.event;
+          console.log("Slack event", msg.payload.type, ev?.type, ev?.channel_type);
           void handleSlackEnvelope(msg.payload).catch((err) => console.error("Slack socket event failed", err));
         }
       });

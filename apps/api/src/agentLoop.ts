@@ -1,4 +1,4 @@
-import { openaiKeyFor, slackTokenFor } from "./slackTokens";
+import { openaiKeyFor, slackApiTokenFor } from "./slackTokens";
 import { addDays, todayUtc, weekStartOf } from "./dates";
 import { pool } from "./db";
 import { isTimeTracking } from "./scoring";
@@ -44,7 +44,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "slack_search",
-      description: "Search this user's Slack messages with their token.",
+      description: "Search Slack messages the workspace bot can see (needs search:read on a user token, otherwise may fail).",
       parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
     },
   },
@@ -52,7 +52,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "slack_fetch_messages",
-      description: "Fetch recent messages from a Slack channel this user can access. channel is a Slack channel ID (C… or D…), not a #name.",
+      description: "Fetch recent messages from a Slack channel the Eval bot is in. channel is a Slack channel ID (C… or D…), not a #name.",
       parameters: {
         type: "object",
         properties: { channel: { type: "string" }, limit: { type: "number" } },
@@ -64,7 +64,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "slack_post_message",
-      description: "Post a message as this Slack user. Use only when they asked you to send it. Preview with confirm=false first.",
+      description: "Post a message as the Eval Slack bot. Use only when they asked you to send it. Preview with confirm=false first.",
       parameters: {
         type: "object",
         properties: { channel: { type: "string" }, text: { type: "string" }, confirm: { type: "boolean" } },
@@ -142,8 +142,8 @@ async function runTool(user: User, name: string, raw: string): Promise<string> {
     return JSON.stringify({ ok: true, metric: metric.name, entry_date: entryDate, value });
   }
 
-  const token = await slackTokenFor(user.id);
-  if (!token) return JSON.stringify({ error: "Connect Slack in Agent settings first." });
+  const token = await slackApiTokenFor(user.id);
+  if (!token) return JSON.stringify({ error: "An admin needs to Connect to Slack under Admin → Agent connect." });
 
   if (name === "slack_search") {
     const query = String(args.query ?? "").slice(0, 200);
@@ -191,7 +191,7 @@ export async function runAgentTurn(
 Weeks run Sunday–Saturday UTC. Today is ${todayUtc()}.
 Use tools for facts. Do not invent metric numbers.
 Preview eval_write_daily and slack_post_message with confirm=false until the user clearly agrees.
-Slack search and post-as-user need a personal Slack token. Workspace DMs and @mentions use the app the admin installed. If Slack tools fail, say an admin must connect Slack.
+Slack DMs, @mentions, and tools use the workspace bot an admin installed. Members do not add Slack tokens. If Slack tools fail, say an admin must Connect to Slack under Admin → Agent connect.
 Keep answers concise.`;
 
   const messages: OaiMessage[] = [

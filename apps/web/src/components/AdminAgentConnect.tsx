@@ -38,6 +38,9 @@ export default function AdminAgentConnect({ status }: { status: SlackInstallStat
         <div className="banner note">
           Eval is added to Slack
           {status.workspaces[0]?.slack_team_id ? ` (workspace ${status.workspaces[0].slack_team_id})` : ""}.
+          {!status.installer_linked
+            ? " Click Connect to Slack again so we can match your Slack user to Eval (needed for DMs)."
+            : " Members are matched by the same email in Slack and Eval."}
         </div>
       ) : (
         <p className="sub">

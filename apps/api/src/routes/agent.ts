@@ -6,7 +6,7 @@ import { encryptSecret } from "../crypto";
 import { pool } from "../db";
 import { postSlackReply } from "../slackInbound";
 import { startSlackSocket } from "../slackSocket";
-import { openaiKeyFor, slackAppCreds, slackAppToken, slackSigningSecret } from "../slackTokens";
+import { linkSlackUser, openaiKeyFor, slackAppCreds, slackAppToken, slackSigningSecret } from "../slackTokens";
 import { runAgentTurn } from "../agentLoop";
 import { h, HttpError } from "../util";
 
@@ -15,10 +15,18 @@ export const agent = Router();
 const SLACK_USER_SCOPES =
   "search:read,channels:history,groups:history,im:history,mpim:history,channels:read,groups:read,im:read,mpim:read,chat:write,users:read,users:read.email";
 const SLACK_BOT_SCOPES =
-  "app_mentions:read,chat:write,im:history,im:read,im:write,users:read,users:read.email";
+  "app_mentions:read,chat:write,im:history,im:read,im:write,users:read,users:read.email,channels:history,channels:read,groups:history,groups:read,mpim:history,mpim:read";
 
 function slackRedirectUri() {
   return process.env.SLACK_REDIRECT_URI || `${process.env.WEB_ORIGIN || "http://localhost:3000"}/api/slack/callback`;
+}
+
+function publicApiOrigin() {
+  const explicit = (process.env.API_PUBLIC_URL || "").replace(/\/$/, "");
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
+  return `http://localhost:${process.env.PORT || 4000}`;
 }
 
 
@@ -120,7 +128,7 @@ async function saveBotInstall(token: string, teamId?: string, botUserId?: string
   return { installed: true as const, slack_team_id: teamId || auth.team_id, bot_user_id: botUserId ?? auth.user_id ?? null };
 }
 
-agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
+agent.get("/agent/slack/install", requireRole("admin"), h(async (req, res) => {
   const safe = async <T>(fn: () => Promise<{ rows: T[] }>) => {
     try {
       return await fn();
@@ -129,7 +137,7 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
       throw err;
     }
   };
-  const [{ rows }, cfg, creds, signing, appTok, openaiOrg] = await Promise.all([
+  const [{ rows }, cfg, creds, signing, appTok, openaiOrg, linked] = await Promise.all([
     safe(() =>
       pool.query<{ slack_team_id: string; bot_user_id: string | null; installed_at: Date }>(
         "select slack_team_id, bot_user_id, installed_at from slack_app_install order by installed_at desc",
@@ -144,9 +152,13 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
     slackSigningSecret(),
     slackAppToken(),
     openaiKeyFor(),
+    safe(() =>
+      pool.query<{ n: number }>("select 1 as n from slack_connections where eval_user_id=$1", [req.user!.id]),
+    ),
   ]);
   res.json({
     installed: rows.length > 0,
+    installer_linked: linked.rows.length > 0,
     slack_oauth: Boolean(creds),
     client_id: cfg.rows[0]?.client_id || process.env.SLACK_CLIENT_ID || "",
     has_secret: Boolean(cfg.rows[0]?.client_secret_enc || process.env.SLACK_CLIENT_SECRET),
@@ -155,9 +167,7 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
     openai_configured: Boolean(openaiOrg),
     workspaces: rows,
     redirect_uri: slackRedirectUri(),
-    events_url:
-      process.env.SLACK_EVENTS_URL ||
-      `${(process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 4000}`).replace(/\/$/, "")}/agent/slack/events`,
+    events_url: process.env.SLACK_EVENTS_URL || `${publicApiOrigin()}/agent/slack/events`,
   });
 }));
 
@@ -298,6 +308,10 @@ agent.get("/agent/slack/oauth/callback", h(async (req, res) => {
     if (req.user!.role !== "admin") throw new HttpError(403, "Not allowed");
     if (!json.access_token) throw new HttpError(400, "Slack did not return a bot token. Add bot scopes to the Slack app.");
     const saved = await saveBotInstall(json.access_token, json.team?.id, json.bot_user_id ?? null);
+    const slackUserId = json.authed_user?.id;
+    if (slackUserId && saved.slack_team_id) {
+      await linkSlackUser(req.user!.id, slackUserId, saved.slack_team_id, json.authed_user?.access_token ?? null);
+    }
     return res.json({ kind: "install", ...saved });
   }
 

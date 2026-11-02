@@ -206,6 +206,7 @@ export interface SlackStatus {
 }
 export interface SlackInstallStatus {
   installed: boolean;
+  installer_linked?: boolean;
   slack_oauth: boolean;
   client_id: string;
   has_secret: boolean;

@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { QueryResultRow } from "pg";
 import { runAgentTurn } from "./agentLoop";
 import { pool } from "./db";
-import { botTokenFor, slackSigningSecret, slackTokenFor } from "./slackTokens";
+import { botTokenFor, linkSlackUser, slackSigningSecret, slackTokenFor } from "./slackTokens";
 import type { User } from "./types";
 
 type SlackEvent = {
@@ -73,13 +74,26 @@ function isDbDisconnect(err: unknown) {
   );
 }
 
-async function q<T>(text: string, params?: unknown[]) {
+async function q<T extends QueryResultRow>(text: string, params?: unknown[]) {
   try {
     return await pool.query<T>(text, params);
   } catch (err) {
     if (!isDbDisconnect(err)) throw err;
     return pool.query<T>(text, params);
   }
+}
+
+async function slackEmailFor(bot: string, slackUserId: string): Promise<string | null> {
+  const headers = { Authorization: `Bearer ${bot}` };
+  const info = (await (
+    await fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, { headers })
+  ).json()) as { ok?: boolean; error?: string; user?: { profile?: { email?: string } } };
+  const fromInfo = info.user?.profile?.email?.trim().toLowerCase();
+  if (fromInfo) return fromInfo;
+  const profile = (await (
+    await fetch(`https://slack.com/api/users.profile.get?user=${encodeURIComponent(slackUserId)}`, { headers })
+  ).json()) as { ok?: boolean; profile?: { email?: string } };
+  return profile.profile?.email?.trim().toLowerCase() || null;
 }
 
 async function evalUserFromSlack(slackUserId: string, teamId?: string | null): Promise<User | undefined> {
@@ -92,18 +106,28 @@ async function evalUserFromSlack(slackUserId: string, teamId?: string | null): P
   );
   if (rows[0]) return rows[0];
   const bot = await botTokenFor(teamId);
-  if (!bot) return undefined;
-  const res = await fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, {
-    headers: { Authorization: `Bearer ${bot}` },
-  });
-  const json = (await res.json()) as { ok?: boolean; user?: { profile?: { email?: string } } };
-  const email = json.user?.profile?.email?.trim().toLowerCase();
-  if (!email) return undefined;
+  if (!bot) {
+    console.warn("Slack inbound: no bot token; admin must Connect to Slack");
+    return undefined;
+  }
+  const email = await slackEmailFor(bot, slackUserId);
+  if (!email) {
+    console.warn("Slack inbound: no email for", slackUserId);
+    return undefined;
+  }
   const byEmail = await q<User>(
     `select id, email, name, role, team_id, active from users where lower(email)=$1 and active=true`,
     [email],
   );
-  return byEmail.rows[0];
+  const user = byEmail.rows[0];
+  if (user && teamId) {
+    try {
+      await linkSlackUser(user.id, slackUserId, teamId);
+    } catch (err) {
+      console.error("Slack identity link failed", err);
+    }
+  }
+  return user;
 }
 
 export async function postSlackReply(
@@ -125,11 +149,12 @@ export async function postSlackReply(
 }
 
 export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
-  if (body.type !== "event_callback" || !body.event) return;
+  if (body.type === "url_verification" || !body.event) return;
   const ev = body.event;
   const id = body.event_id || `${ev.channel}:${ev.ts}`;
   if (alreadySeen(id)) return;
-  if (ev.bot_id || ev.subtype) return;
+  if (ev.bot_id) return;
+  if (ev.subtype && ev.subtype !== "file_share") return;
 
   const teamId = body.team_id || ev.team;
   if (ev.type === "assistant_thread_started") {

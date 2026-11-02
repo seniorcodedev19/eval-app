@@ -1,4 +1,4 @@
-import { decryptSecret } from "./crypto";
+import { decryptSecret, encryptSecret } from "./crypto";
 import { pool } from "./db";
 
 export async function openaiKeyFor(_evalUserId?: number): Promise<string | null> {
@@ -84,14 +84,44 @@ export async function botTokenFor(slackTeamId?: string | null): Promise<string |
 }
 
 export async function slackTokenFor(evalUserId: number): Promise<string | null> {
-  const { rows } = await pool.query<{ user_token_enc: string }>(
+  const { rows } = await pool.query<{ user_token_enc: string | null }>(
     "select user_token_enc from slack_connections where eval_user_id=$1",
     [evalUserId],
   );
-  if (!rows[0]) return null;
+  const packed = rows[0]?.user_token_enc;
+  if (!packed) return null;
   try {
-    return decryptSecret(rows[0].user_token_enc);
+    return decryptSecret(packed);
   } catch {
     return null;
   }
+}
+
+/** User token if they connected one; otherwise the workspace bot the admin installed. */
+export async function slackApiTokenFor(evalUserId: number, slackTeamId?: string | null): Promise<string | null> {
+  return (await slackTokenFor(evalUserId)) || (await botTokenFor(slackTeamId));
+}
+
+export async function linkSlackUser(
+  evalUserId: number,
+  slackUserId: string,
+  slackTeamId: string,
+  userToken?: string | null,
+) {
+  const enc = userToken ? encryptSecret(userToken) : null;
+  await pool.query("delete from slack_connections where slack_team_id=$1 and slack_user_id=$2 and eval_user_id<>$3", [
+    slackTeamId,
+    slackUserId,
+    evalUserId,
+  ]);
+  await pool.query(
+    `insert into slack_connections (eval_user_id, slack_user_id, slack_team_id, user_token_enc, scopes, connected_at)
+     values ($1,$2,$3,$4,$5, now())
+     on conflict (eval_user_id) do update set
+       slack_user_id=excluded.slack_user_id,
+       slack_team_id=excluded.slack_team_id,
+       user_token_enc=coalesce(excluded.user_token_enc, slack_connections.user_token_enc),
+       connected_at=now()`,
+    [evalUserId, slackUserId, slackTeamId, enc, userToken ? "user" : "identity"],
+  );
 }
