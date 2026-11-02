@@ -58,6 +58,7 @@ async function readSse(
 export default function AgentChat() {
   const [list, setList] = useState<AgentConversation[]>([]);
   const [id, setId] = useState<number | null>(null);
+  const [source, setSource] = useState("web");
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,6 +86,7 @@ export default function AgentChat() {
     const c = await loadOne(cid);
     if (!c) return;
     setId(c.id);
+    setSource(c.source || "web");
     setMessages(c.messages ?? []);
   }
 
@@ -106,7 +108,6 @@ export default function AgentChat() {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error ?? `Request failed (${res.status})`);
       }
-      let assistant = "";
       await readSse(res, (event, data) => {
         if (event === "conversation" && typeof data.id === "number") setId(data.id);
         if (event === "tool" && typeof data.name === "string") {
@@ -114,10 +115,11 @@ export default function AgentChat() {
           setStatus(toolStatus[name] ?? `Using ${name}`);
           setMessages((m) => [...m, { role: "tool", content: name, tool_name: name }]);
         }
-        if (event === "token" && typeof data.text === "string") assistant = data.text;
+        if (event === "token" && typeof data.text === "string") {
+          setMessages((m) => [...m, { role: "assistant", content: data.text as string }]);
+        }
         if (event === "error") setError(String(data.error ?? "Agent failed"));
       });
-      if (assistant) setMessages((m) => [...m, { role: "assistant", content: assistant }]);
       await refreshList();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Agent failed");
@@ -135,6 +137,7 @@ export default function AgentChat() {
           style={{ width: "100%" }}
           onClick={() => {
             setId(null);
+            setSource("web");
             setMessages([]);
             setError(null);
           }}
@@ -145,7 +148,8 @@ export default function AgentChat() {
           {list.map((c) => (
             <li key={c.id}>
               <button type="button" className={`agent-thread${id === c.id ? " on" : ""}`} onClick={() => void openConv(c.id)}>
-                {c.title}
+                <span className="agent-thread-title">{c.title}</span>
+                {c.source === "slack" ? <span className="agent-thread-src">Slack</span> : null}
               </button>
             </li>
           ))}
@@ -153,10 +157,15 @@ export default function AgentChat() {
       </aside>
       <div className="agent-main">
         <div className="agent-log" ref={log}>
+          {source === "slack" && messages.length > 0 ? (
+            <div className="muted" style={{ fontSize: 13 }}>
+              This thread is also in Slack. Replies you send here are posted back to that thread.
+            </div>
+          ) : null}
           {messages.length === 0 && !busy ? (
             <div className="agent-chat-empty">
               <strong>Ask about your week</strong>
-              <div className="muted">Try “summarize this week” or connect Slack in settings to search channels.</div>
+              <div className="muted">Try “summarize this week” or ask about a metric.</div>
             </div>
           ) : null}
           {messages.map((m, i) => (

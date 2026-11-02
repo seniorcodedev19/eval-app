@@ -106,7 +106,13 @@ async function evalUserFromSlack(slackUserId: string, teamId?: string | null): P
   return byEmail.rows[0];
 }
 
-async function reply(teamId: string | undefined, evalUserId: number | null, channel: string, threadTs: string | undefined, text: string) {
+export async function postSlackReply(
+  teamId: string | undefined,
+  evalUserId: number | null,
+  channel: string,
+  threadTs: string | undefined,
+  text: string,
+) {
   const bot = await botTokenFor(teamId);
   const userTok = evalUserId ? await slackTokenFor(evalUserId) : null;
   const token = bot || userTok;
@@ -129,7 +135,7 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
   if (ev.type === "assistant_thread_started") {
     const th = ev.assistant_thread;
     if (!th?.channel_id || !th.thread_ts) return;
-    await reply(teamId, null, th.channel_id, th.thread_ts, "Hi — send a message here and I’ll help with Eval.");
+    await postSlackReply(teamId, null, th.channel_id, th.thread_ts, "Hi — send a message here and I’ll help with Eval.");
     return;
   }
 
@@ -145,12 +151,12 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
 
   const user = await evalUserFromSlack(ev.user, teamId);
   if (!user || !user.active) {
-    await reply(
+    await postSlackReply(
       teamId,
       null,
       ev.channel,
       threadTs,
-      "I can’t match you to an Eval account. Use the same email in Slack and Eval, or Connect Slack in Eval → Agent → Agent settings.",
+      "I can’t match you to an Eval account. Use the same email in Slack and Eval. An admin connects Slack under Admin → Agent connect.",
     );
     return;
   }
@@ -189,5 +195,5 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
 
   await q(`insert into agent_messages (conversation_id, role, content) values ($1,'assistant',$2)`, [convId, replyText]);
   await q(`update agent_conversations set updated_at=now() where id=$1`, [convId]);
-  await reply(teamId, user.id, ev.channel, threadTs, replyText);
+  await postSlackReply(teamId, user.id, ev.channel, threadTs, replyText);
 }

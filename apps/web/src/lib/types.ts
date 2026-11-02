@@ -211,12 +211,17 @@ export interface SlackInstallStatus {
   has_secret: boolean;
   has_signing_secret: boolean;
   has_app_token: boolean;
+  openai_configured: boolean;
   workspaces: { slack_team_id: string; bot_user_id: string | null; installed_at: string }[];
+  redirect_uri: string;
+  events_url: string;
 }
 export interface AgentConversation {
   id: number;
   title: string;
   source: string;
+  slack_channel_id?: string | null;
+  slack_thread_ts?: string | null;
   updated_at: string;
   messages?: AgentChatMessage[];
 }

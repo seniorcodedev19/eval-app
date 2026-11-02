@@ -23,7 +23,14 @@ export async function startSlackSocket() {
   stopCurrent?.();
   stopCurrent = null;
 
-  const appToken = await slackAppToken();
+  let appToken = "";
+  try {
+    appToken = await slackAppToken();
+  } catch (err) {
+    console.error("Slack Socket Mode token lookup failed", err instanceof Error ? err.message : err);
+    setTimeout(() => void startSlackSocket(), 8000);
+    return;
+  }
   if (!appToken) {
     console.log("Slack Socket Mode off (save an app-level token on Agent connect for local DMs / @eval)");
     return;

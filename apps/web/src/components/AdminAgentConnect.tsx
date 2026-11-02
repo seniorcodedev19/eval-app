@@ -11,6 +11,7 @@ export default function AdminAgentConnect({ status }: { status: SlackInstallStat
   const [signingSecret, setSigningSecret] = useState("");
   const [appToken, setAppToken] = useState("");
   const [token, setToken] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
   const [connecting, setConnecting] = useState(false);
 
   async function addToSlack() {
@@ -40,8 +41,8 @@ export default function AdminAgentConnect({ status }: { status: SlackInstallStat
         </div>
       ) : (
         <p className="sub">
-          Save the Slack app Client ID and Secret, then Connect to Slack to add Eval to the workspace. Users still paste
-          their own token in Agent settings.
+          Save the OpenAI key and Slack app credentials, then Connect to Slack. Everyone uses the same agent — they do
+          not add keys or tokens.
         </p>
       )}
 
@@ -50,10 +51,39 @@ export default function AdminAgentConnect({ status }: { status: SlackInstallStat
         <a href="https://api.slack.com/apps" target="_blank" rel="noreferrer">
           api.slack.com/apps
         </a>
-        . Redirect URL: <code>http://localhost:3000/api/slack/callback</code>
-        . For DMs: App Home → Messages Tab on, Socket Mode on, bot events <code>app_mention</code> and{" "}
+        . OAuth Redirect URL: <code>{status.redirect_uri || "http://localhost:3000/api/slack/callback"}</code>
+        . Event Subscriptions Request URL: <code>{status.events_url || "http://localhost:4000/agent/slack/events"}</code>
+        . For local DMs use Socket Mode. Enable App Home → Messages Tab, and bot events <code>app_mention</code> and{" "}
         <code>message.im</code>.
       </p>
+
+      <label htmlFor="agent-openai-key">OpenAI API key</label>
+      <input
+        id="agent-openai-key"
+        type="password"
+        autoComplete="off"
+        placeholder={status.openai_configured ? "Saved — paste to replace" : "sk-… (used for every member’s agent)"}
+        value={openaiKey}
+        onChange={(e) => setOpenaiKey(e.target.value)}
+        style={{ width: "100%", marginBottom: 12 }}
+      />
+      <div className="row" style={{ marginBottom: 20 }}>
+        <button
+          className="btn secondary"
+          type="button"
+          disabled={busy || openaiKey.trim().length < 20}
+          onClick={async () => {
+            if (await run("POST", "/agent/openai/key", { key: openaiKey.trim() })) setOpenaiKey("");
+          }}
+        >
+          Save API key
+        </button>
+        {status.openai_configured ? (
+          <button className="btn danger" type="button" disabled={busy} onClick={() => void run("DELETE", "/agent/openai")}>
+            Remove key
+          </button>
+        ) : null}
+      </div>
 
       <label htmlFor="slack-client-id">Client ID</label>
       <input

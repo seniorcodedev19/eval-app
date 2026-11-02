@@ -4,8 +4,9 @@ import { z } from "zod";
 import { requireRole } from "../auth";
 import { encryptSecret } from "../crypto";
 import { pool } from "../db";
+import { postSlackReply } from "../slackInbound";
 import { startSlackSocket } from "../slackSocket";
-import { slackAppCreds, slackAppToken, slackSigningSecret } from "../slackTokens";
+import { openaiKeyFor, slackAppCreds, slackAppToken, slackSigningSecret } from "../slackTokens";
 import { runAgentTurn } from "../agentLoop";
 import { h, HttpError } from "../util";
 
@@ -74,7 +75,7 @@ agent.get("/agent/slack/status", h(async (req, res) => {
       slack_team_id: string;
       connected_at: Date;
     }>("select slack_user_id, slack_team_id, connected_at from slack_connections where eval_user_id=$1", [req.user!.id]),
-    pool.query("select 1 from agent_user_settings where eval_user_id=$1 and openai_key_enc is not null", [req.user!.id]),
+    openaiKeyFor(req.user!.id),
   ]);
   const row = rows[0];
   res.json({
@@ -82,11 +83,11 @@ agent.get("/agent/slack/status", h(async (req, res) => {
     slack_user_id: row?.slack_user_id ?? null,
     slack_team_id: row?.slack_team_id ?? null,
     connected_at: row?.connected_at ?? null,
-    openai_configured: Boolean(openai.rowCount),
+    openai_configured: Boolean(openai),
   });
 }));
 
-agent.post("/agent/slack/token", h(async (req, res) => {
+agent.post("/agent/slack/token", requireRole("admin"), h(async (req, res) => {
   const { token } = z.object({ token: z.string().trim().min(10).max(500) }).parse(req.body);
   if (!/^xoxp-/i.test(token)) {
     throw new HttpError(400, "Paste your Slack user token (starts with xoxp-)");
@@ -128,7 +129,7 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
       throw err;
     }
   };
-  const [{ rows }, cfg, creds, signing, appTok] = await Promise.all([
+  const [{ rows }, cfg, creds, signing, appTok, openaiOrg] = await Promise.all([
     safe(() =>
       pool.query<{ slack_team_id: string; bot_user_id: string | null; installed_at: Date }>(
         "select slack_team_id, bot_user_id, installed_at from slack_app_install order by installed_at desc",
@@ -142,6 +143,7 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
     slackAppCreds(),
     slackSigningSecret(),
     slackAppToken(),
+    openaiKeyFor(),
   ]);
   res.json({
     installed: rows.length > 0,
@@ -150,7 +152,12 @@ agent.get("/agent/slack/install", requireRole("admin"), h(async (_req, res) => {
     has_secret: Boolean(cfg.rows[0]?.client_secret_enc || process.env.SLACK_CLIENT_SECRET),
     has_signing_secret: Boolean(signing),
     has_app_token: Boolean(appTok),
+    openai_configured: Boolean(openaiOrg),
     workspaces: rows,
+    redirect_uri: slackRedirectUri(),
+    events_url:
+      process.env.SLACK_EVENTS_URL ||
+      `${(process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 4000}`).replace(/\/$/, "")}/agent/slack/events`,
   });
 }));
 
@@ -252,7 +259,7 @@ agent.get("/agent/slack/install/oauth/start", requireRole("admin"), h(async (req
   res.json({ url: await slackAuthorizeUrl(req.user!.id, "install") });
 }));
 
-agent.get("/agent/slack/oauth/start", h(async (req, res) => {
+agent.get("/agent/slack/oauth/start", requireRole("admin"), h(async (req, res) => {
   res.json({ url: await slackAuthorizeUrl(req.user!.id, "user") });
 }));
 
@@ -301,7 +308,7 @@ agent.get("/agent/slack/oauth/callback", h(async (req, res) => {
   res.json({ kind: "user", ...(await saveSlackUserToken(req.user!.id, userToken, json.authed_user?.scope ?? SLACK_USER_SCOPES)) });
 }));
 
-agent.post("/agent/openai/key", h(async (req, res) => {
+agent.post("/agent/openai/key", requireRole("admin"), h(async (req, res) => {
   const { key } = z.object({ key: z.string().trim().min(20).max(500) }).parse(req.body);
   if (!/^sk-[A-Za-z0-9_-]+/.test(key)) throw new HttpError(400, "That does not look like an OpenAI API key (starts with sk-)");
   const check = await fetch("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}` } });
@@ -313,18 +320,15 @@ agent.post("/agent/openai/key", h(async (req, res) => {
     throw new HttpError(500, "AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
   }
   await pool.query(
-    `insert into agent_user_settings (eval_user_id, openai_key_enc, updated_at) values ($1,$2,now())
-     on conflict (eval_user_id) do update set openai_key_enc=excluded.openai_key_enc, updated_at=now()`,
-    [req.user!.id, enc],
+    `insert into slack_app_config (id, openai_key_enc, updated_at) values (1,$1,now())
+     on conflict (id) do update set openai_key_enc=excluded.openai_key_enc, updated_at=now()`,
+    [enc],
   );
   res.json({ openai_configured: true });
 }));
 
-agent.delete("/agent/openai", h(async (req, res) => {
-  await pool.query(
-    `update agent_user_settings set openai_key_enc=null, updated_at=now() where eval_user_id=$1`,
-    [req.user!.id],
-  );
+agent.delete("/agent/openai", requireRole("admin"), h(async (_req, res) => {
+  await pool.query(`update slack_app_config set openai_key_enc=null, updated_at=now() where id=1`);
   res.json({ openai_configured: false });
 }));
 
@@ -335,7 +339,7 @@ agent.delete("/agent/slack", h(async (req, res) => {
 
 agent.get("/agent/conversations", h(async (req, res) => {
   const { rows } = await pool.query(
-    `select id, title, source, updated_at from agent_conversations
+    `select id, title, source, slack_channel_id, slack_thread_ts, updated_at from agent_conversations
      where user_id=$1 order by updated_at desc limit 50`,
     [req.user!.id],
   );
@@ -354,7 +358,7 @@ agent.post("/agent/conversations", h(async (req, res) => {
 agent.get("/agent/conversations/:id", h(async (req, res) => {
   const id = Number(req.params.id);
   const { rows: conv } = await pool.query(
-    `select id, title, source, updated_at from agent_conversations where id=$1 and user_id=$2`,
+    `select id, title, source, slack_channel_id, slack_thread_ts, updated_at from agent_conversations where id=$1 and user_id=$2`,
     [id, req.user!.id],
   );
   if (!conv[0]) throw new HttpError(404, "Conversation not found");
@@ -406,6 +410,23 @@ agent.post("/agent/chat", h(async (req, res) => {
     const reply = await runAgentTurn(user, hist.reverse(), send);
     await pool.query(`insert into agent_messages (conversation_id, role, content) values ($1,'assistant',$2)`, [convId, reply]);
     await pool.query(`update agent_conversations set updated_at=now() where id=$1`, [convId]);
+    const thread = await pool.query<{
+      source: string;
+      slack_channel_id: string | null;
+      slack_thread_ts: string | null;
+    }>("select source, slack_channel_id, slack_thread_ts from agent_conversations where id=$1", [convId]);
+    const t = thread.rows[0];
+    if (t?.source === "slack" && t.slack_channel_id) {
+      try {
+        const conn = await pool.query<{ slack_team_id: string }>(
+          "select slack_team_id from slack_connections where eval_user_id=$1",
+          [user.id],
+        );
+        await postSlackReply(conn.rows[0]?.slack_team_id, user.id, t.slack_channel_id, t.slack_thread_ts ?? undefined, reply);
+      } catch (err) {
+        console.error("Slack thread sync failed", err);
+      }
+    }
     send("done", { conversation_id: convId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Agent failed";

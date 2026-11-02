@@ -10,7 +10,10 @@ const empty: SlackInstallStatus = {
   has_secret: false,
   has_signing_secret: false,
   has_app_token: false,
+  openai_configured: false,
   workspaces: [],
+  redirect_uri: "",
+  events_url: "",
 };
 
 export default async function AdminAgentPage({
@@ -27,7 +30,7 @@ export default async function AdminAgentPage({
   return (
     <>
       <h1>Agent connect</h1>
-      <p className="sub">Install Eval on Slack so people can DM the bot and @mention it. Users can still paste a personal token in Agent settings for search and post-as-me.</p>
+      <p className="sub">Install Eval on Slack and save an OpenAI key. Members only chat — they do not add keys or tokens.</p>
       {!res.ok ? <div className="banner error">{res.error}</div> : null}
       {sp.slack === "connected" ? <div className="banner note">Eval is connected to the Slack workspace.</div> : null}
       {sp.slack === "error" ? <div className="banner error">{sp.slack_error || "Slack install failed"}</div> : null}

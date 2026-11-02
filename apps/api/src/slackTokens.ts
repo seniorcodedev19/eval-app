@@ -1,18 +1,10 @@
 import { decryptSecret } from "./crypto";
 import { pool } from "./db";
 
-export async function openaiKeyFor(evalUserId: number): Promise<string | null> {
-  const { rows } = await pool.query<{ openai_key_enc: string | null }>(
-    "select openai_key_enc from agent_user_settings where eval_user_id=$1",
-    [evalUserId],
-  );
-  const packed = rows[0]?.openai_key_enc;
-  if (!packed) return null;
-  try {
-    return decryptSecret(packed);
-  } catch {
-    return null;
-  }
+export async function openaiKeyFor(_evalUserId?: number): Promise<string | null> {
+  const row = await slackAppConfigRow();
+  const fromOrg = fromEnc(row?.openai_key_enc, process.env.OPENAI_API_KEY);
+  return fromOrg || null;
 }
 
 type AppConfigRow = {
@@ -20,12 +12,13 @@ type AppConfigRow = {
   client_secret_enc: string | null;
   signing_secret_enc: string | null;
   app_token_enc: string | null;
+  openai_key_enc: string | null;
 };
 
 async function slackAppConfigRow(): Promise<AppConfigRow | null> {
   try {
     const { rows } = await pool.query<AppConfigRow>(
-      "select client_id, client_secret_enc, signing_secret_enc, app_token_enc from slack_app_config where id=1",
+      "select client_id, client_secret_enc, signing_secret_enc, app_token_enc, openai_key_enc from slack_app_config where id=1",
     );
     return rows[0] ?? null;
   } catch (err) {

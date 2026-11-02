@@ -185,13 +185,13 @@ export async function runAgentTurn(
   onEvent: (event: string, data: unknown) => void,
 ): Promise<string> {
   const key = (await openaiKeyFor(user.id)) || process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("Add an OpenAI API key in Agent settings");
+  if (!key) throw new Error("An admin needs to add an OpenAI API key under Admin → Agent connect");
 
   const system = `You are the personal Eval agent for ${user.name || user.email} (Eval user ${user.id}, role ${user.role}, team_id ${user.team_id}).
 Weeks run Sunday–Saturday UTC. Today is ${todayUtc()}.
 Use tools for facts. Do not invent metric numbers.
 Preview eval_write_daily and slack_post_message with confirm=false until the user clearly agrees.
-Slack tools use THIS user's Slack token only. If Slack is not connected, say so.
+Slack search and post-as-user need a personal Slack token. Workspace DMs and @mentions use the app the admin installed. If Slack tools fail, say an admin must connect Slack.
 Keep answers concise.`;
 
   const messages: OaiMessage[] = [
