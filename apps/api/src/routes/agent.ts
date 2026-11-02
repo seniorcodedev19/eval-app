@@ -45,7 +45,7 @@ async function saveSlackUserToken(evalUserId: number, token: string, scopes: str
   try {
     enc = encryptSecret(token);
   } catch {
-    throw new HttpError(500, "AGENT_TOKEN_SECRET is not set on the API");
+    throw new HttpError(500, "AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
   }
   await pool.query(
     `insert into slack_connections (eval_user_id, slack_user_id, slack_team_id, user_token_enc, scopes, connected_at)
@@ -105,7 +105,7 @@ async function saveBotInstall(token: string, teamId?: string, botUserId?: string
   try {
     enc = encryptSecret(token);
   } catch {
-    throw new HttpError(500, "AGENT_TOKEN_SECRET is not set on the API");
+    throw new HttpError(500, "AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
   }
   await pool.query(
     `insert into slack_app_install (slack_team_id, bot_user_id, bot_token_enc, installed_at)
@@ -176,7 +176,7 @@ agent.post("/agent/slack/install/credentials", requireRole("admin"), h(async (re
     try {
       return encryptSecret(plain);
     } catch {
-      throw new HttpError(500, "AGENT_TOKEN_SECRET is not set on the API");
+      throw new HttpError(500, "AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
     }
   };
   const secretEnc = enc(b.client_secret, cur.rows[0]?.client_secret_enc ?? null);
@@ -216,22 +216,44 @@ agent.delete("/agent/slack/install", requireRole("admin"), h(async (_req, res) =
   res.json({ installed: false });
 }));
 
-agent.get("/agent/slack/install/oauth/start", requireRole("admin"), h(async (req, res) => {
+async function slackAuthorizeUrl(uid: number, kind: "install" | "user") {
   const creds = await slackAppCreds();
   if (!creds) {
-    throw new HttpError(400, "Save the Slack Client ID and Client Secret on this page first.");
+    throw new HttpError(
+      400,
+      kind === "install"
+        ? "Save the Slack Client ID and Client Secret on this page first."
+        : "An admin must save Slack app credentials first (Admin → Agent connect).",
+    );
   }
-  const state = await new SignJWT({ uid: req.user!.id, kind: "install" })
+  if (kind === "user") {
+    const installed = await pool.query("select 1 from slack_app_install limit 1");
+    if (!installed.rowCount && !process.env.SLACK_BOT_TOKEN) {
+      throw new HttpError(400, "An admin needs to Connect to Slack under Admin → Agent connect first.");
+    }
+  }
+  const state = await new SignJWT({ uid, kind })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("15m")
     .sign(new TextEncoder().encode(process.env.API_JWT_SECRET ?? ""));
   const url = new URL("https://slack.com/oauth/v2/authorize");
   url.searchParams.set("client_id", creds.client_id);
-  url.searchParams.set("scope", SLACK_BOT_SCOPES);
   url.searchParams.set("redirect_uri", slackRedirectUri());
   url.searchParams.set("state", state);
-  res.json({ url: url.toString() });
+  // Slack's authorize page errors ("There's been a glitch") if `scope` is omitted,
+  // even when only a user token is needed.
+  url.searchParams.set("scope", SLACK_BOT_SCOPES);
+  if (kind === "user") url.searchParams.set("user_scope", SLACK_USER_SCOPES);
+  return url.toString();
+}
+
+agent.get("/agent/slack/install/oauth/start", requireRole("admin"), h(async (req, res) => {
+  res.json({ url: await slackAuthorizeUrl(req.user!.id, "install") });
+}));
+
+agent.get("/agent/slack/oauth/start", h(async (req, res) => {
+  res.json({ url: await slackAuthorizeUrl(req.user!.id, "user") });
 }));
 
 agent.get("/agent/slack/oauth/callback", h(async (req, res) => {
@@ -288,7 +310,7 @@ agent.post("/agent/openai/key", h(async (req, res) => {
   try {
     enc = encryptSecret(key);
   } catch {
-    throw new HttpError(500, "AGENT_TOKEN_SECRET is not set on the API");
+    throw new HttpError(500, "AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
   }
   await pool.query(
     `insert into agent_user_settings (eval_user_id, openai_key_enc, updated_at) values ($1,$2,now())

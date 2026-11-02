@@ -1,8 +1,23 @@
+import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 import { API_URL, signApiToken } from "@/lib/api";
 
+async function destForSlack(req: NextRequest) {
+  const dest = new URL("/agent", req.nextUrl.origin);
+  const state = req.nextUrl.searchParams.get("state");
+  const secret = process.env.API_JWT_SECRET;
+  if (!state || !secret) return dest;
+  try {
+    const { payload } = await jwtVerify(state, new TextEncoder().encode(secret), { algorithms: ["HS256"] });
+    if (payload.kind === "install") dest.pathname = "/admin/agent";
+  } catch {
+    /* stay on /agent */
+  }
+  return dest;
+}
+
 export async function GET(req: NextRequest) {
-  const dest = new URL("/admin/agent", req.nextUrl.origin);
+  const dest = await destForSlack(req);
   const slackErr = req.nextUrl.searchParams.get("error");
   if (slackErr) {
     dest.searchParams.set("slack", "error");

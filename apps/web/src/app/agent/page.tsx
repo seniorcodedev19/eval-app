@@ -26,7 +26,7 @@ export default async function AgentPage({
         <div>
           <h1>Agent</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Chat here about your week. Paste your Slack token in settings to search channels and post for you.
+            Chat here about your week. Connect Slack in settings to search channels and post for you.
           </p>
         </div>
         <div className="head-actions">

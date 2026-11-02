@@ -63,8 +63,27 @@ function cleanText(text: string) {
   return text.replace(/<@[A-Z0-9]+>/gi, "").replace(/\s+/g, " ").trim();
 }
 
+function isDbDisconnect(err: unknown) {
+  const e = err as { code?: string; message?: string };
+  return (
+    e.code === "57P01" ||
+    e.code === "08P01" ||
+    e.code === "ECONNRESET" ||
+    /terminat|timeout|ECONNRESET/i.test(e.message ?? "")
+  );
+}
+
+async function q<T>(text: string, params?: unknown[]) {
+  try {
+    return await pool.query<T>(text, params);
+  } catch (err) {
+    if (!isDbDisconnect(err)) throw err;
+    return pool.query<T>(text, params);
+  }
+}
+
 async function evalUserFromSlack(slackUserId: string, teamId?: string | null): Promise<User | undefined> {
-  const { rows } = await pool.query<User>(
+  const { rows } = await q<User>(
     `select u.id, u.email, u.name, u.role, u.team_id, u.active
      from slack_connections c
      join users u on u.id = c.eval_user_id
@@ -80,7 +99,7 @@ async function evalUserFromSlack(slackUserId: string, teamId?: string | null): P
   const json = (await res.json()) as { ok?: boolean; user?: { profile?: { email?: string } } };
   const email = json.user?.profile?.email?.trim().toLowerCase();
   if (!email) return undefined;
-  const byEmail = await pool.query<User>(
+  const byEmail = await q<User>(
     `select id, email, name, role, team_id, active from users where lower(email)=$1 and active=true`,
     [email],
   );
@@ -131,13 +150,13 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
       null,
       ev.channel,
       threadTs,
-      "I can’t match you to an Eval account. Use the same email in Slack and Eval, or paste your Slack token in Eval → Agent → Agent settings.",
+      "I can’t match you to an Eval account. Use the same email in Slack and Eval, or Connect Slack in Eval → Agent → Agent settings.",
     );
     return;
   }
 
   let convId: number;
-  const existing = await pool.query<{ id: number }>(
+  const existing = await q<{ id: number }>(
     `select id from agent_conversations
      where user_id=$1 and source='slack' and slack_channel_id=$2 and slack_thread_ts=$3
      order by id desc limit 1`,
@@ -147,7 +166,7 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
     convId = existing.rows[0].id;
   } else {
     const title = text.slice(0, 60);
-    const ins = await pool.query<{ id: number }>(
+    const ins = await q<{ id: number }>(
       `insert into agent_conversations (user_id, title, source, slack_channel_id, slack_thread_ts)
        values ($1,$2,'slack',$3,$4) returning id`,
       [user.id, title, ev.channel, threadTs],
@@ -155,8 +174,8 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
     convId = ins.rows[0].id;
   }
 
-  await pool.query(`insert into agent_messages (conversation_id, role, content) values ($1,'user',$2)`, [convId, text]);
-  const { rows: hist } = await pool.query<{ role: string; content: string }>(
+  await q(`insert into agent_messages (conversation_id, role, content) values ($1,'user',$2)`, [convId, text]);
+  const { rows: hist } = await q<{ role: string; content: string }>(
     `select role, content from agent_messages where conversation_id=$1 and role in ('user','assistant') order by id desc limit 24`,
     [convId],
   );
@@ -168,7 +187,7 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
     replyText = err instanceof Error ? err.message : "Agent failed";
   }
 
-  await pool.query(`insert into agent_messages (conversation_id, role, content) values ($1,'assistant',$2)`, [convId, replyText]);
-  await pool.query(`update agent_conversations set updated_at=now() where id=$1`, [convId]);
+  await q(`insert into agent_messages (conversation_id, role, content) values ($1,'assistant',$2)`, [convId, replyText]);
+  await q(`update agent_conversations set updated_at=now() where id=$1`, [convId]);
   await reply(teamId, user.id, ev.channel, threadTs, replyText);
 }

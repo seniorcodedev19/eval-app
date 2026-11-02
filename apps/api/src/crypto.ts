@@ -2,10 +2,16 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:
 
 const PREFIX = "v1";
 
+function secretMaterial(): string {
+  for (const value of [process.env.AGENT_TOKEN_SECRET, process.env.API_JWT_SECRET]) {
+    const secret = (value ?? "").trim();
+    if (secret.length >= 16) return secret;
+  }
+  throw new Error("AGENT_TOKEN_SECRET or API_JWT_SECRET must be set (16+ characters)");
+}
+
 function key(): Buffer {
-  const secret = process.env.AGENT_TOKEN_SECRET ?? "";
-  if (secret.length < 16) throw new Error("AGENT_TOKEN_SECRET must be set (16+ characters)");
-  return scryptSync(secret, "eval-agent-tokens", 32);
+  return scryptSync(secretMaterial(), "eval-agent-tokens", 32);
 }
 
 export function encryptSecret(plain: string): string {

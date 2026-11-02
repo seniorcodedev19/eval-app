@@ -79,6 +79,6 @@ Database: Supabase Postgres. Set `DATABASE_URL` to the transaction pooler (port 
 
 Env vars
 - web: `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `API_URL` (the api project's URL), `API_JWT_SECRET`, optional `ALLOWED_EMAIL_DOMAIN`. Leave `AUTH_DEV_LOGIN` unset.
-- api: `DATABASE_URL`, `DIRECT_URL`, `API_JWT_SECRET`, `ADMIN_EMAILS`.
+- api: `DATABASE_URL`, `DIRECT_URL`, `API_JWT_SECRET`, `ADMIN_EMAILS`, optional `OPENAI_API_KEY`. Agent encryption uses `AGENT_TOKEN_SECRET` if set, otherwise `API_JWT_SECRET`.
 
 Add `https://<your-web-domain>/api/auth/callback/google` to the Google OAuth redirect URIs.

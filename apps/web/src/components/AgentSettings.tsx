@@ -9,6 +9,7 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
   const [open, setOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [token, setToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -97,29 +98,34 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
                 </div>
               ) : (
                 <p className="sub">
-                  Paste your personal Slack user token so the agent can search and post as you. An admin adds Eval to
-                  the workspace under Admin → Agent connect.
+                  Connect your Slack account so the agent can search your channels and post as you. An admin adds Eval
+                  to the workspace under Admin → Agent connect.
                 </p>
               )}
-              <label htmlFor="slack-token">Slack connection token</label>
-              <input
-                id="slack-token"
-                type="password"
-                autoComplete="off"
-                placeholder="xoxp-…"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-              />
-              <div className="row">
+              <div className="row" style={{ marginBottom: 12 }}>
                 <button
                   className="btn"
                   type="button"
-                  disabled={busy || token.trim().length < 10}
+                  disabled={busy || connecting}
                   onClick={async () => {
-                    if (await run("POST", "/agent/slack/token", { token: token.trim() })) setToken("");
+                    setError(null);
+                    setConnecting(true);
+                    try {
+                      const res = await fetch("/api/proxy/agent/slack/oauth/start", { cache: "no-store" });
+                      const j = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+                      if (!res.ok || !j.url) {
+                        setError(j.error ?? "Could not start Slack connect");
+                        return;
+                      }
+                      window.location.assign(j.url);
+                    } catch {
+                      setError("Could not start Slack connect");
+                    } finally {
+                      setConnecting(false);
+                    }
                   }}
                 >
-                  Save token
+                  {status.connected ? "Reconnect Slack" : "Connect Slack"}
                 </button>
                 {status.connected ? (
                   <button
@@ -131,6 +137,27 @@ export default function AgentSettings({ status }: { status: SlackStatus }) {
                     Disconnect
                   </button>
                 ) : null}
+              </div>
+              <label htmlFor="slack-token">Or paste a user token</label>
+              <input
+                id="slack-token"
+                type="password"
+                autoComplete="off"
+                placeholder="xoxp-…"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+              />
+              <div className="row">
+                <button
+                  className="btn secondary"
+                  type="button"
+                  disabled={busy || token.trim().length < 10}
+                  onClick={async () => {
+                    if (await run("POST", "/agent/slack/token", { token: token.trim() })) setToken("");
+                  }}
+                >
+                  Save token
+                </button>
               </div>
             </section>
 

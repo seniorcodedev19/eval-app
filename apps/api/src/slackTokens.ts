@@ -8,7 +8,11 @@ export async function openaiKeyFor(evalUserId: number): Promise<string | null> {
   );
   const packed = rows[0]?.openai_key_enc;
   if (!packed) return null;
-  return decryptSecret(packed);
+  try {
+    return decryptSecret(packed);
+  } catch {
+    return null;
+  }
 }
 
 type AppConfigRow = {
@@ -67,13 +71,23 @@ export async function botTokenFor(slackTeamId?: string | null): Promise<string |
       "select bot_token_enc from slack_app_install where slack_team_id=$1",
       [slackTeamId],
     );
-    if (rows[0]?.bot_token_enc) return decryptSecret(rows[0].bot_token_enc);
+    if (rows[0]?.bot_token_enc) {
+      try {
+        return decryptSecret(rows[0].bot_token_enc);
+      } catch {
+        /* try latest install */
+      }
+    }
   }
   const { rows } = await pool.query<{ bot_token_enc: string | null }>(
     "select bot_token_enc from slack_app_install order by installed_at desc limit 1",
   );
   if (!rows[0]?.bot_token_enc) return null;
-  return decryptSecret(rows[0].bot_token_enc);
+  try {
+    return decryptSecret(rows[0].bot_token_enc);
+  } catch {
+    return null;
+  }
 }
 
 export async function slackTokenFor(evalUserId: number): Promise<string | null> {
@@ -82,5 +96,9 @@ export async function slackTokenFor(evalUserId: number): Promise<string | null> 
     [evalUserId],
   );
   if (!rows[0]) return null;
-  return decryptSecret(rows[0].user_token_enc);
+  try {
+    return decryptSecret(rows[0].user_token_enc);
+  } catch {
+    return null;
+  }
 }
