@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useBusy } from "@/components/Busy";
+import Dropdown from "@/components/Dropdown";
 import type { Period } from "@/lib/types";
 
 export default function PeriodPicker({ periods, value }: { periods: Period[]; value: number }) {
@@ -13,23 +14,21 @@ export default function PeriodPicker({ periods, value }: { periods: Period[]; va
   return (
     <div>
       <label htmlFor="period">Period</label>
-      <select
+      <Dropdown<number>
         id="period"
+        ariaLabel="Period"
         value={value}
-        onChange={(e) => {
+        options={periods.map((p) => ({
+          value: p.id,
+          label: `${p.label}${p.locked ? " (locked)" : ""}`,
+        }))}
+        onChange={(v) => {
           const params = new URLSearchParams(sp.toString());
-          params.set("period", e.target.value);
+          params.set("period", String(v));
           startNav();
           router.push(`${path}?${params.toString()}`);
         }}
-      >
-        {periods.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-            {p.locked ? " (locked)" : ""}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

@@ -6,11 +6,12 @@ import StatusPill from "@/components/StatusPill";
 import TeamTiles from "@/components/TeamTiles";
 import { TeamDailyDonut, TeamStatusDonut } from "@/components/TeamOverview";
 import TeamWeekTable from "@/components/TeamWeekTable";
+import TrainingSummary from "@/components/TrainingSummary";
 import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
 import { addDays, weekParam } from "@/lib/dates";
-import type { TeamWeekRow, User, WeekData } from "@/lib/types";
+import type { TeamProfile, TeamWeekRow, TrainingMatrix, User, WeekData } from "@/lib/types";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const sp = await searchParams;
@@ -19,9 +20,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const me = await apiFetch<User>("/me");
   const manager = me.role !== "member";
 
-  const [data, team] = await Promise.all([
+  const [data, team, profs, matrix] = await Promise.all([
     tryFetch<WeekData>(`/week${wq}`),
     tryFetch<{ rows: TeamWeekRow[] }>(`/team-week${wq}`),
+    tryFetch<TeamProfile[]>("/profiles"),
+    tryFetch<TrainingMatrix>("/training-matrix"),
   ]);
 
   if (!data.ok) return <div className="banner error">{data.error}</div>;
@@ -71,6 +74,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <h2 className="panel-title">Team daily score</h2>
             <TeamDailyDonut rows={rows} days={d.days} />
           </div>
+        </div>
+      ) : null}
+
+      {profs.ok && matrix.ok ? (
+        <div style={{ marginBottom: 12 }}>
+          <TrainingSummary profiles={profs.data} matrix={matrix.data} />
         </div>
       ) : null}
 

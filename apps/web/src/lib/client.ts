@@ -23,6 +23,25 @@ export async function call(
   }
 }
 
+/* Like call(), but hands back the parsed response. For the few endpoints that
+   answer with data the browser needs rather than just succeeding — reading a
+   site's metadata before anything is saved. Rejects so the caller can catch. */
+export async function callJson<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/proxy${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Network error. Try again.");
+  }
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error ?? `Request failed (${res.status})`);
+  return j as T;
+}
+
 // Run a request, show its error, refresh server data on success.
 export function useAction() {
   const router = useRouter();

@@ -53,7 +53,20 @@ export function Icon({
   name,
   size = 18,
 }: {
-  name: "dashboard" | "team" | "time" | "interviews" | "profile" | "admin" | "logout" | "agent" | "metrics";
+  name:
+    | "dashboard"
+    | "team"
+    | "time"
+    | "interviews"
+    | "profile"
+    | "admin"
+    | "logout"
+    | "agent"
+    | "metrics"
+    | "profiles"
+    | "training"
+    | "sites"
+    | "history";
   size?: number;
 }) {
   const common = {
@@ -136,6 +149,43 @@ export function Icon({
           <path d="M10 5H7.5A2.5 2.5 0 0 0 5 7.5v9A2.5 2.5 0 0 0 7.5 19H10" />
           <path d="M10 12h9" />
           <path d="M16 8.5 19.5 12 16 15.5" />
+        </svg>
+      );
+    // An ID card: a portrait on the left, detail lines on the right.
+    case "profiles":
+      return (
+        <svg {...common}>
+          <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+          <circle cx="8.3" cy="10.8" r="2" />
+          <path d="M5.3 15.9a3.2 3.2 0 0 1 6 0" />
+          <path d="M14.2 10h4.3M14.2 13.6h3.1" />
+        </svg>
+      );
+    // A brain with a rising spark: training an AI account.
+    case "training":
+      return (
+        <svg {...common}>
+          <path d="M11.3 4.6a3.4 3.4 0 0 0-3.3 3.4 3 3 0 0 0-1 5.5 3.2 3.2 0 0 0 2.9 4 2.4 2.4 0 0 0 1.4-.5V4.6Z" />
+          <path d="M13.3 4.6a3.4 3.4 0 0 1 3.3 3.4 3 3 0 0 1 1 5.5 3.2 3.2 0 0 1-2.9 4 2.4 2.4 0 0 1-1.4-.5V4.6Z" />
+          <path d="M12.3 19v1.6" />
+        </svg>
+      );
+    // A clock turning back: the append-only audit log.
+    case "history":
+      return (
+        <svg {...common}>
+          <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+          <path d="M3.3 4.6v4.1h4.1" />
+          <path d="M12 8.2V12l2.8 1.7" />
+        </svg>
+      );
+    // A globe: the external sites accounts are created on.
+    case "sites":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M3.5 12h17" />
+          <path d="M12 3.5c2.3 2.3 3.4 5.3 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.3-3.4-8.5S9.7 5.8 12 3.5Z" />
         </svg>
       );
   }

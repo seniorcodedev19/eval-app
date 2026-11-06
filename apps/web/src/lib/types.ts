@@ -11,6 +11,8 @@ export interface User {
   job_title?: string;
   bio?: string;
   avatar?: string | null;
+  /** Bidders are assignable to profiles but excluded from weekly metrics. */
+  is_bidder?: boolean;
 }
 export interface Team {
   id: number;
@@ -237,4 +239,84 @@ export interface AuditPage {
   total: number;
   limit: number;
   offset: number;
+}
+
+/* ---------- profiles and AI training (migration 015) ---------- */
+
+export type TrainingStatus = "created" | "applied" | "approved" | "rejected" | "on_hold";
+
+export interface ProfileAssignee {
+  user_id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+}
+export interface TrainingAccount {
+  id: number;
+  site_id: number;
+  site_name: string;
+  status: TrainingStatus;
+  account_email: string;
+  note: string;
+  updated_at: string;
+}
+export interface TeamProfile {
+  id: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  linkedin_url: string;
+  notes: string;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+  assignees: ProfileAssignee[];
+  accounts: TrainingAccount[];
+  /** The bidder working this profile, if one is assigned. */
+  bidder_id: number | null;
+  bidder: ProfileAssignee | null;
+  bidder_status: BidderStatus;
+}
+/** How far the assigned bidder has got. Unrelated to training statuses. */
+export type BidderStatus = "none" | "assigned" | "bidding";
+export interface TrainingSite {
+  id: number;
+  name: string;
+  url: string;
+  /** Pulled from the site's own page by POST /training-sites/fetch. May be "". */
+  summary: string;
+  /** Absolute URL of the site's icon, or "" if none was found. */
+  icon_url: string;
+  active: boolean;
+  sort_order: number;
+}
+/** What the site's own page reports about itself. Nothing is saved yet. */
+export interface SiteMetaPreview {
+  name: string;
+  summary: string;
+  icon_url: string;
+  url: string;
+}
+/** Rows are sites, columns are profiles. */
+export interface TrainingMatrix {
+  sites: { id: number; name: string; url: string; summary: string; icon_url: string }[];
+  profiles: { id: number; full_name: string }[];
+  accounts: {
+    id: number;
+    profile_id: number;
+    site_id: number;
+    status: TrainingStatus;
+    account_email: string;
+    note: string;
+    updated_at: string;
+  }[];
+}
+/** Assignee picker list: every active user, ids and names only. */
+export interface ProfilePerson {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  /** Bidders are assignable but left out of all weekly metrics views. */
+  is_bidder: boolean;
 }

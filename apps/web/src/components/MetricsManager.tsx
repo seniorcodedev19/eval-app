@@ -2,12 +2,20 @@
 
 import { useState } from "react";
 import { useAction } from "@/lib/client";
+import Dropdown from "./Dropdown";
+import Switch from "./Switch";
 import { isTimeTracking, type FormulaType, type Metric, type Team, type User } from "@/lib/types";
 
 const Err = ({ text }: { text: string | null }) =>
   text ? <div className="msg error" role="alert">{text}</div> : null;
 
 const needsTarget = (t: FormulaType) => t === "ratio" || t === "overtime";
+
+const FORMULA_OPTIONS: { value: FormulaType; label: string }[] = [
+  { value: "ratio", label: "Ratio (done ÷ target)" },
+  { value: "count", label: "Count (done)" },
+  { value: "overtime", label: "Overtime (base + extra bonus)" },
+];
 
 function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
   const { error, busy, run } = useAction();
@@ -38,11 +46,13 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
         {isTimeTracking(m) ? (
           <span className="muted">Time logs (built-in)</span>
         ) : (
-          <select aria-label={`${name || m.name} formula`} value={formula} disabled={!canEdit} onChange={(e) => setFormula(e.target.value as FormulaType)}>
-            <option value="ratio">Ratio (done ÷ target)</option>
-            <option value="count">Count (done)</option>
-            <option value="overtime">Overtime (base + extra bonus)</option>
-          </select>
+          <Dropdown<FormulaType>
+            ariaLabel={`${name || m.name} formula`}
+            value={formula}
+            disabled={!canEdit}
+            onChange={setFormula}
+            options={FORMULA_OPTIONS}
+          />
         )}
       </td>
       <td className="n">
@@ -74,7 +84,12 @@ function Row({ m, canEdit }: { m: Metric; canEdit: boolean }) {
         <input type="text" aria-label={`${name || m.name} unit`} value={unit} maxLength={24} disabled={!canEdit} onChange={(e) => setUnit(e.target.value)} style={{ width: 90 }} />
       </td>
       <td>
-        <input type="checkbox" aria-label={`${name || m.name} is active`} checked={isTimeTracking(m) ? true : active} disabled={!canEdit || isTimeTracking(m)} onChange={(e) => setActive(e.target.checked)} />
+        <Switch
+          label={`${name || m.name} is active`}
+          checked={isTimeTracking(m) ? true : active}
+          disabled={!canEdit || isTimeTracking(m)}
+          onChange={setActive}
+        />
       </td>
       <td>
         {canEdit && (
@@ -153,11 +168,13 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
         </div>
         <div>
           <label htmlFor="m-type">Formula</label>
-          <select id="m-type" value={f.formula_type} onChange={(e) => setF({ ...f, formula_type: e.target.value as FormulaType })}>
-            <option value="ratio">Ratio (done ÷ target)</option>
-            <option value="count">Count (done)</option>
-            <option value="overtime">Overtime (base + extra bonus)</option>
-          </select>
+          <Dropdown<FormulaType>
+            id="m-type"
+            ariaLabel="Formula"
+            value={f.formula_type}
+            onChange={(v) => setF({ ...f, formula_type: v })}
+            options={FORMULA_OPTIONS}
+          />
         </div>
         <div>
           <label htmlFor="m-weight">Weight (base)</label>
@@ -189,14 +206,16 @@ export default function MetricsManager({ me, metrics, teams }: { me: User; metri
         {me.role === "admin" && (
           <div>
             <label htmlFor="m-team">For</label>
-            <select id="m-team" value={f.team_id} onChange={(e) => setF({ ...f, team_id: e.target.value })}>
-              <option value="">All teams</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <Dropdown<string>
+              id="m-team"
+              ariaLabel="For"
+              value={f.team_id}
+              onChange={(v) => setF({ ...f, team_id: v })}
+              options={[
+                { value: "", label: "All teams" },
+                ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+              ]}
+            />
           </div>
         )}
         <button

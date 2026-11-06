@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useBusy } from "@/components/Busy";
+import Dropdown from "@/components/Dropdown";
 
 export default function QuerySelect({
   base,
@@ -21,23 +22,18 @@ export default function QuerySelect({
   const router = useRouter();
   const { startNav } = useBusy();
   return (
-    <select
-      aria-label={label}
+    <Dropdown<string>
+      ariaLabel={label}
       value={value}
-      onChange={(e) => {
+      options={options.map((o) => ({ value: o.value, label: o.label }))}
+      onChange={(v) => {
         const p = new URLSearchParams(extra);
-        if (e.target.value) p.set(name, e.target.value);
+        if (v) p.set(name, v);
         else p.delete(name);
         const q = p.toString();
         startNav();
         router.push(q ? `${base}?${q}` : base);
       }}
-    >
-      {options.map((o) => (
-        <option key={o.value || "all"} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    />
   );
 }

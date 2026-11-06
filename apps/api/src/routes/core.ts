@@ -71,7 +71,7 @@ core.get("/users", h(async (req, res) => {
   const actor = req.user!;
   if (actor.role === "member") throw new HttpError(403, "Not allowed");
   const { rows } = await pool.query(
-    `select id, email, name, role, team_id, active, job_title, bio, avatar from users
+    `select id, email, name, role, team_id, active, job_title, bio, avatar, is_bidder from users
      where ($1::boolean or team_id = $2) order by name, email`,
     [actor.role === "admin", actor.team_id],
   );
@@ -89,6 +89,8 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
       role: z.enum(["admin", "manager", "member"]).optional(),
       team_id: z.number().int().nullable().optional(),
       active: z.boolean().optional(),
+      // Bidders are assignable to profiles but excluded from weekly metrics.
+      is_bidder: z.boolean().optional(),
     })
     .parse(req.body);
   if (id === req.user!.id && ((b.role && b.role !== "admin") || b.active === false)) {
@@ -106,8 +108,9 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
        bio = coalesce($5, bio),
        role = coalesce($6, role),
        team_id = case when $7::boolean then $8 else team_id end,
-       active = coalesce($9, active)
-     where id = $1 returning id, email, name, role, team_id, active, job_title, bio`,
+       active = coalesce($9, active),
+       is_bidder = coalesce($10, is_bidder)
+     where id = $1 returning id, email, name, role, team_id, active, job_title, bio, is_bidder`,
     [
       id,
       b.name ?? null,
@@ -118,6 +121,7 @@ core.patch("/users/:id", requireRole("admin"), h(async (req, res) => {
       "team_id" in b,
       b.team_id ?? null,
       b.active ?? null,
+      b.is_bidder ?? null,
     ],
   );
   if (!rows[0]) throw new HttpError(404, "User not found");

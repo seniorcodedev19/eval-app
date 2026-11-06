@@ -8,8 +8,11 @@ import { signInWithPassword } from "@/lib/account";
 const googleReady = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  if ((await auth())?.user) redirect("/dashboard");
   const sp = await searchParams;
+  // The API rejected this session's token. The browser cookie may still look
+  // valid, so skip the usual bounce to the dashboard — it would loop.
+  const expired = sp.error === "SessionExpired";
+  if (!expired && (await auth())?.user) redirect("/dashboard");
   const badCreds = sp.error === "CredentialsSignin";
   const signInFailed = sp.error === "SignInFailed" || sp.error === "CallbackRouteError";
 
@@ -18,6 +21,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <h1 className="auth-title">Welcome back</h1>
       <p className="auth-sub">Sign in to continue to Team Huddle.</p>
 
+      {expired && (
+        <div className="banner error" role="alert">
+          Your session has expired. Sign in again to continue.
+        </div>
+      )}
       {badCreds && (
         <div className="banner error" role="alert">
           Invalid email or password.
@@ -29,7 +37,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           details weren&apos;t checked. Try again in a moment.
         </div>
       )}
-      {sp.error && !badCreds && !signInFailed && (
+      {sp.error && !badCreds && !signInFailed && !expired && (
         <div className="banner error" role="alert">
           Sign-in was refused. Use an account from your company domain.
         </div>

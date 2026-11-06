@@ -8,6 +8,7 @@ import { fmt } from "@/lib/format";
 import { useBusy } from "./Busy";
 import Accordion from "./Accordion";
 import Avatar from "./Avatar";
+import Dropdown from "./Dropdown";
 
 function shortName(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -101,16 +102,18 @@ export default function PointsChart({ rows, meId, week }: { rows: TeamWeekRow[];
       title="Everyone's points"
       actions={
         <div className="filters">
-          <select id="chart-order" aria-label="Order by" value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="total_desc">Points, high to low</option>
-            <option value="total_asc">Points, low to high</option>
-            <option value="team">Team, A to Z</option>
-            {metrics.map((m) => (
-              <option key={m.id} value={`metric:${m.id}`}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+          <Dropdown<string>
+            id="chart-order"
+            ariaLabel="Order by"
+            value={sort}
+            onChange={setSort}
+            options={[
+              { value: "total_desc", label: "Points, high to low" },
+              { value: "total_asc", label: "Points, low to high" },
+              { value: "team", label: "Team, A to Z" },
+              ...metrics.map((m) => ({ value: `metric:${m.id}`, label: m.name })),
+            ]}
+          />
         </div>
       }
     >

@@ -8,6 +8,7 @@ export interface User {
   team_id: number | null;
   active: boolean;
   avatar?: string | null;
+  is_bidder?: boolean;
 }
 
 declare global {

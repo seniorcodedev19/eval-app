@@ -185,7 +185,7 @@ a { color: inherit; }
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
 }
-.side a.link svg { flex-shrink: 0; opacity: 0.85; }
+.side a.link svg, .side button.link svg { flex-shrink: 0; opacity: 0.85; }
 .side a.link:hover, .side button.link:hover {
   background: var(--canvas);
   color: var(--ink);
@@ -198,6 +198,8 @@ a { color: inherit; }
 }
 .side a.link[aria-current="page"] svg { opacity: 1; }
 .side a.link[aria-current="page"]:hover { background: var(--accent-strong); color: var(--accent-ink); }
+.side button.nav-parent.within { color: var(--ink); font-weight: 600; }
+.side button.nav-parent.within svg { opacity: 1; color: var(--accent); }
 .nav-group, .nav-sub { display: flex; flex-direction: column; gap: 1px; }
 .nav-sub {
   margin-left: 15px;
@@ -1777,3 +1779,496 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
   letter-spacing: 0.04em;
 }
 @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+
+/* ---------- profiles + AI training (migration 015) ---------- */
+.profiles-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.profiles-bar .table-search { margin-bottom: 0; flex: 1; min-width: 200px; }
+
+/* Segmented cards/list switch. */
+.viewswitch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--canvas);
+}
+.viewswitch button {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.viewswitch button:hover { color: var(--ink); }
+.viewswitch button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.viewswitch button:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--accent-ring); }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.profile-card { display: flex; flex-direction: column; gap: 10px; }
+.profile-card header { display: flex; align-items: center; gap: 10px; }
+.profile-card h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-card header .btn { flex-shrink: 0; }
+
+.profile-fields { margin: 0; display: grid; gap: 5px; }
+.profile-fields > div { display: flex; gap: 8px; font-size: 13px; }
+.profile-fields dt { color: var(--muted); min-width: 64px; flex-shrink: 0; }
+.profile-fields dd { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.profile-assignees { display: flex; flex-wrap: wrap; gap: 6px; }
+.assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 3px;
+  border-radius: 999px;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+/* Per-site status rows inside a card. */
+.accounts { display: grid; gap: 6px; }
+.account-row { display: flex; align-items: center; gap: 8px; }
+.account-site {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-row select { min-width: 124px; padding-block: 6px; font-size: 12.5px; }
+.account-row .dd { flex: none; width: 148px; }
+.account-row .dd-trigger { min-height: 32px; padding: 4px 8px; font-size: 12.5px; }
+.account-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 24px; height: 24px; padding: 0;
+  border: 0; border-radius: var(--r-sm);
+  background: none; color: var(--muted); cursor: pointer;
+}
+.account-remove:hover:not(:disabled) { background: var(--danger-wash); color: var(--danger); }
+.account-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+.account-add { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.account-add .dd { flex: 1; width: auto; }
+.account-addbtn { align-self: start; gap: 5px; margin-top: 4px; }
+.accounts-empty { margin: 0; }
+
+/* Status chips, tinted per state. */
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chip.status-ok { background: var(--ok-wash); color: var(--ok); border-color: transparent; }
+.chip.status-warn { background: var(--warn-wash); color: var(--warn); border-color: transparent; }
+.chip.status-danger { background: var(--danger-wash); color: var(--danger); border-color: transparent; }
+.chip.status-neutral { background: var(--accent-wash); color: var(--accent-strong); border-color: transparent; }
+.chip.status-muted { background: var(--canvas); color: var(--muted); }
+
+/* Toggleable chip, used for assignee picking and site activation. */
+button.chip.toggle { cursor: pointer; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
+button.chip.toggle:hover { border-color: var(--line-strong); color: var(--ink); }
+button.chip.toggle.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--accent-ring); }
+
+.assignees { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.profile-editor { margin-bottom: 12px; }
+.profile-editor textarea { width: 100%; }
+.btn.small { padding: 5px 10px; font-size: 12.5px; }
+.muted.small, .small { font-size: 12px; }
+
+/* The status matrix: sites down the side, profiles across the top. */
+.matrix td.cell { padding: 5px 6px; }
+.matrix td.cell .dd { min-width: 118px; }
+.matrix td.cell .dd-trigger { min-height: 32px; padding: 4px 8px; font-size: 12.5px; }
+/* Tint the cell's control to its status, as the old select did. */
+.dd-trigger.status-ok .dd-value { color: var(--ok); }
+.dd-trigger.status-warn .dd-value { color: var(--warn); }
+.dd-trigger.status-danger .dd-value { color: var(--danger); }
+.dd-trigger.status-neutral .dd-value { color: var(--accent-strong); }
+.dd-trigger.status-muted .dd-value { color: var(--muted); }
+.profiles-table td { vertical-align: top; }
+
+/* Panel header with an action on the right. */
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.panel-head .panel-title { margin: 0; flex: 1; min-width: 0; }
+.panel-head .btn { flex-shrink: 0; }
+
+/* Share-of-total bar, one segment per status. */
+.statusbar {
+  display: flex;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line);
+}
+.statusbar-seg { display: block; min-width: 2px; }
+.statusbar-seg.tone-ok { background: var(--ok); }
+.statusbar-seg.tone-warn { background: var(--warn); }
+.statusbar-seg.tone-danger { background: var(--danger); }
+.statusbar-seg.tone-neutral { background: var(--accent); }
+.statusbar-seg.tone-muted { background: var(--muted); }
+
+/* ---------- AI training kanban board ---------- */
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(216px, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  align-items: start;
+}
+.kanban-col {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 10px;
+  min-height: 150px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.kanban-col.over { border-color: var(--accent); background: var(--accent-wash); }
+.kanban-head { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+.kanban-head h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.kanban-head .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.kanban-head .dot.tone-ok { background: var(--ok); }
+.kanban-head .dot.tone-warn { background: var(--warn); }
+.kanban-head .dot.tone-danger { background: var(--danger); }
+.kanban-head .dot.tone-neutral { background: var(--accent); }
+.kanban-head .dot.tone-muted { background: var(--muted); }
+.kanban-count {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.kanban-cards { display: grid; gap: 7px; }
+.kanban-card {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  cursor: grab;
+}
+.kanban-card:active { cursor: grabbing; }
+.kanban-card.busy { opacity: 0.6; cursor: progress; }
+.kanban-card strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kanban-site { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.kanban-card select { width: 100%; padding-block: 5px; font-size: 12px; }
+.kanban-empty {
+  margin: 0;
+  padding: 14px 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+}
+
+/* Inline "add a training site" form. */
+/* Add-a-site: paste a URL, fetch what the site says about itself, confirm. */
+.addsite { display: flex; flex-direction: column; gap: 9px; align-items: stretch; }
+.addsite input, .addsite textarea { font-size: 13px; padding-block: 7px; }
+.addsite-error { color: var(--danger); font-size: 12px; }
+.addsite-url { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.addsite-url input { flex: 1; min-width: 220px; }
+.addsite-url .btn { gap: 6px; white-space: nowrap; }
+.addsite-preview {
+  display: flex; gap: 11px; align-items: flex-start;
+  padding: 11px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--canvas);
+}
+.addsite-fields { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.addsite-fields label { font-size: 11px; color: var(--muted); font-weight: 600; }
+.addsite-fields textarea { resize: vertical; font-family: inherit; }
+.addsite-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+/* A training site's icon, with a monogram fallback when it can't load. */
+.sitelogo {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; border-radius: 7px; overflow: hidden; background: var(--surface);
+  border: 1px solid var(--line);
+}
+.sitelogo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sitelogo-fallback {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent); font-weight: 700; line-height: 1;
+}
+
+/* Site cards: logo, title, domain, then the summary. */
+.site-head { display: flex; gap: 11px; align-items: center; margin-bottom: 4px; }
+.site-head-text { min-width: 0; }
+.site-head-text h3 { margin: 0; }
+.site-host { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.site-summary {
+  margin: 0 0 11px; font-size: 12.5px; color: var(--muted); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.site-cell { display: inline-flex; gap: 8px; align-items: center; }
+
+/* Hidden from sight but still reachable: the file input behind a styled
+   button. display:none would take it out of the accessibility tree. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* CSV import: the confirmation step and the skipped-row report. */
+.csv-confirm {
+  margin-top: 11px; padding: 11px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--canvas);
+}
+.csv-confirm p { margin: 0 0 9px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.csv-confirm strong { color: var(--ink); }
+.csv-skipped { margin: 7px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+.csv-skipped li { margin-top: 2px; }
+
+/* Dropdown: a select-shaped control whose sheet matches the sidebar account
+   menu. Used where options need an avatar, logo or status colour beside them,
+   which a native <option> cannot hold. */
+.dd { position: relative; }
+.dd-trigger {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-md);
+  background-color: var(--field);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.dd-trigger:hover:not(:disabled) { border-color: var(--line-strong); background-color: var(--surface); }
+.dd-trigger:focus-visible, .dd-trigger.open {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.dd-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+.dd-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-value.placeholder { color: var(--muted); }
+.dd-media { display: inline-flex; align-items: center; flex: none; }
+.dd-caret { display: inline-flex; flex: none; color: var(--muted); transition: transform 0.16s ease; }
+.dd-trigger.open .dd-caret { transform: rotate(180deg); }
+
+/* Portalled to <body> and positioned in viewport coordinates, so a scrolling
+   table or a panel with overflow cannot clip it. */
+.dd-sheet {
+  position: fixed;
+  z-index: 60;
+  max-height: 272px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lift);
+  animation: usermenu-in 0.14s ease-out;
+}
+/* Flipped above the trigger when there isn't room below. Its own keyframe:
+   the shared one animates transform and would cancel the offset. */
+.dd-sheet.flipped { transform: translateY(-100%); animation-name: dd-in-up; }
+@keyframes dd-in-up {
+  from { opacity: 0; transform: translateY(calc(-100% + 4px)); }
+  to { opacity: 1; transform: translateY(-100%); }
+}
+.dd-option {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+.dd-option.active { background: var(--canvas); }
+.dd-option.on { font-weight: 600; }
+.dd-option:disabled { opacity: 0.45; cursor: not-allowed; }
+.dd-option-text { flex: 1; min-width: 0; display: grid; }
+.dd-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-option-hint { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-check { flex: none; color: var(--accent); }
+.dd-empty { margin: 0; padding: 9px; font-size: 12.5px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .dd-sheet { animation: none; }
+  .dd-caret { transition: none; }
+}
+/* A status dot, for the training-status dropdowns. */
+.dd-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--muted); }
+.dd-dot.tone-ok { background: var(--ok); }
+.dd-dot.tone-warn { background: var(--warn); }
+.dd-dot.tone-danger { background: var(--danger); }
+.dd-dot.tone-neutral { background: var(--accent); }
+.dd-dot.tone-muted { background: var(--muted); }
+
+/* Assignee picker: a select to add, removable pills for what's chosen. */
+.assignee-picker { display: grid; gap: 9px; }
+.assignee-picker .dd { max-width: 320px; }
+
+/* Sliding on/off switch, used instead of a checkbox. */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: 40px;
+  height: 23px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.switch.sm { width: 34px; height: 20px; }
+.switch.on { background: var(--accent); }
+.switch:disabled { opacity: 0.45; cursor: not-allowed; }
+.switch:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+.switch-thumb {
+  position: absolute;
+  left: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s ease;
+}
+.switch.sm .switch-thumb { width: 14px; height: 14px; }
+.switch.on .switch-thumb { transform: translateX(17px); }
+.switch.sm.on .switch-thumb { transform: translateX(14px); }
+@media (prefers-reduced-motion: reduce) {
+  .switch, .switch-thumb { transition: none; }
+}
+/* A switch with its wording beside it. */
+.switch-row { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; }
+.switch-row .muted { font-size: 12px; }
+
+/* A small icon-only action, for Edit on a profile row or card. */
+.icon-action {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+.icon-action:hover:not(:disabled) {
+  color: var(--accent); border-color: var(--accent); background: var(--accent-wash);
+}
+.icon-action:focus-visible {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.icon-action:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* The bidder pill: an assignee pill tinted by the bid's state, with the
+   state spelled out so the colour isn't carrying the meaning alone. */
+.bidder-tag { padding-right: 4px; }
+.bidder-state {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--canvas); color: var(--muted);
+}
+.bidder-tag.status-ok { border-color: var(--ok); }
+.bidder-tag.status-ok .bidder-state { background: var(--ok-wash); color: var(--ok); }
+.bidder-tag.status-warn { border-color: var(--warn); }
+.bidder-tag.status-warn .bidder-state { background: var(--warn-wash); color: var(--warn); }
+.bidder-tag.status-danger { border-color: var(--danger); }
+.bidder-tag.status-danger .bidder-state { background: var(--danger-wash); color: var(--danger); }
+.bidder-tag.status-neutral { border-color: var(--accent); }
+.bidder-tag.status-neutral .bidder-state { background: var(--accent-wash); color: var(--accent-strong); }
+
+.bidder-row { margin-top: 14px; }
+.chip.removable { display: inline-flex; align-items: center; gap: 5px; padding-right: 5px; }
+.chip.removable button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer; opacity: 0.6;
+}
+.chip.removable button:hover { opacity: 1; background: var(--raise); }
+.chip.removable button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.site-summary-sm {
+  display: block; font-size: 11.5px; color: var(--muted); font-weight: 400;
+  max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

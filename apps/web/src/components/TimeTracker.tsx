@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAction } from "@/lib/client";
+import Dropdown from "./Dropdown";
 import { addDays, dayMonth, shortDay } from "@/lib/dates";
 import { hours } from "@/lib/format";
 import type { TimeWeek } from "@/lib/types";
@@ -23,13 +24,13 @@ export default function TimeTracker({ data }: { data: TimeWeek }) {
         <div className="row">
           <div>
             <label htmlFor="t-date">Day</label>
-            <select id="t-date" value={date} onChange={(e) => setDate(e.target.value)}>
-              {choices.map((d) => (
-                <option key={d} value={d}>
-                  {shortDay(d)} {dayMonth(d)}
-                </option>
-              ))}
-            </select>
+            <Dropdown<string>
+              id="t-date"
+              ariaLabel="Day"
+              value={date}
+              onChange={setDate}
+              options={choices.map((d) => ({ value: d, label: `${shortDay(d)} ${dayMonth(d)}` }))}
+            />
           </div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <label htmlFor="t-task">What did you work on?</label>

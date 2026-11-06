@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useAction } from "@/lib/client";
 import type { Interview, User } from "@/lib/types";
+import Avatar from "./Avatar";
+import Dropdown from "./Dropdown";
 import PersonCell from "./PersonCell";
 
 const when = (iso: string) =>
@@ -40,11 +42,17 @@ function Card({ i, canManage }: { i: Interview; canManage: boolean }) {
           <div className="row">
             <div>
               <label htmlFor={`s-${i.id}`}>Status</label>
-              <select id={`s-${i.id}`} value={status} onChange={(e) => setStatus(e.target.value as Interview["status"])}>
-                <option value="scheduled">scheduled</option>
-                <option value="done">done</option>
-                <option value="cancelled">cancelled</option>
-              </select>
+              <Dropdown<Interview["status"]>
+                id={`s-${i.id}`}
+                ariaLabel="Status"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "scheduled", label: "scheduled" },
+                  { value: "done", label: "done" },
+                  { value: "cancelled", label: "cancelled" },
+                ]}
+              />
             </div>
           </div>
           <div>
@@ -80,14 +88,19 @@ export default function InterviewsPanel({ me, interviews, members }: { me: User;
           <div className="row">
             <div>
               <label htmlFor="i-member">Person</label>
-              <select id="i-member" value={memberId} onChange={(e) => setMemberId(e.target.value)}>
-                <option value="">Choose…</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name || p.email}
-                  </option>
-                ))}
-              </select>
+              <Dropdown<string>
+                id="i-member"
+                ariaLabel="Person"
+                value={memberId}
+                placeholder="Choose…"
+                onChange={setMemberId}
+                options={people.map((p) => ({
+                  value: String(p.id),
+                  label: p.name || p.email,
+                  hint: p.name ? p.email : undefined,
+                  media: <Avatar name={p.name} email={p.email} src={p.avatar} size={22} />,
+                }))}
+              />
             </div>
             <div>
               <label htmlFor="i-at">Date and time</label>

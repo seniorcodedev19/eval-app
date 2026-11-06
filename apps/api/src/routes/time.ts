@@ -95,7 +95,7 @@ time.get("/time-team", h(async (req, res) => {
             t.log_date, coalesce(sum(t.minutes),0)::int as minutes
      from users u
      left join time_logs t on t.user_id = u.id and t.log_date between $1 and $2
-     where u.active and u.role <> 'admin' and ($3::int is null or u.team_id = $3)
+     where u.active and u.role <> 'admin' and not u.is_bidder and ($3::int is null or u.team_id = $3)
      group by u.id, t.log_date
      order by name`,
     [days[0], days[6], teamId],

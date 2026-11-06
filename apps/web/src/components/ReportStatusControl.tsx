@@ -3,6 +3,7 @@
 import { useAction } from "@/lib/client";
 import type { Status } from "@/lib/types";
 import StatusPill from "./StatusPill";
+import Dropdown from "./Dropdown";
 
 const options: { value: Status; label: string }[] = [
   { value: "draft", label: "In progress" },
@@ -26,22 +27,14 @@ export default function ReportStatusControl({
   if (!canEdit) return <StatusPill status={status} />;
   return (
     <div>
-      <select
+      <Dropdown<string>
         id={`st-${userId}-${weekStart}`}
-        key={status}
-        defaultValue={status}
+        value={status}
         disabled={busy}
-        aria-label="Report status"
-        onChange={(e) =>
-          run("PATCH", "/week/status", { user_id: userId, week_start: weekStart, status: e.target.value })
-        }
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        ariaLabel="Report status"
+        options={options.map((o) => ({ value: o.value, label: o.label }))}
+        onChange={(v) => run("PATCH", "/week/status", { user_id: userId, week_start: weekStart, status: v })}
+      />
       {error && (
         <div className="msg error" role="alert">
           {error}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAction } from "@/lib/client";
 import type { Team, User } from "@/lib/types";
 import Avatar from "./Avatar";
+import Dropdown from "./Dropdown";
+import Switch from "./Switch";
 
 const Err = ({ text }: { text: string | null }) =>
   text ? <div className="msg error" role="alert">{text}</div> : null;
@@ -30,25 +32,37 @@ function UserRow({ me, u, teams }: { me: User; u: User; teams: Team[] }) {
         <input aria-label={`Job title for ${u.email}`} value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
       </td>
       <td>
-        <select aria-label={`Role for ${u.email}`} defaultValue={u.role} onChange={(e) => run("PATCH", `/users/${u.id}`, { role: e.target.value })}>
-          <option value="member">member</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-        </select>
+        <Dropdown<string>
+          ariaLabel={`Role for ${u.email}`}
+          value={u.role}
+          onChange={(v) => run("PATCH", `/users/${u.id}`, { role: v })}
+          options={[
+            { value: "member", label: "member" },
+            { value: "manager", label: "manager" },
+            { value: "admin", label: "admin" },
+          ]}
+        />
       </td>
       <td>
-        <select
-          aria-label={`Team for ${u.email}`}
-          defaultValue={u.team_id ?? ""}
-          onChange={(e) => run("PATCH", `/users/${u.id}`, { team_id: e.target.value ? Number(e.target.value) : null })}
-        >
-          <option value="">No team</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        <Dropdown<string>
+          ariaLabel={`Team for ${u.email}`}
+          value={u.team_id == null ? "" : String(u.team_id)}
+          onChange={(v) => run("PATCH", `/users/${u.id}`, { team_id: v ? Number(v) : null })}
+          options={[
+            { value: "", label: "No team" },
+            ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+          ]}
+        />
+      </td>
+      <td>
+        {/* Bidders are assignable to profiles but left out of every weekly
+            metrics view, so this is a switch rather than a role. */}
+        <Switch
+          label={`${u.email} is a bidder`}
+          checked={Boolean(u.is_bidder)}
+          disabled={busy}
+          onChange={(next) => run("PATCH", `/users/${u.id}`, { is_bidder: next })}
+        />
       </td>
       <td>
         <div className="row" style={{ flexWrap: "nowrap" }}>
@@ -91,12 +105,13 @@ function Users({ me, users, teams }: { me: User; users: User[]; teams: Team[] })
               <th>Job title</th>
               <th>Role</th>
               <th>Team</th>
+              <th>Bidder</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <UserRow key={`${u.id}-${u.name}-${u.email}-${u.job_title}-${u.role}-${u.team_id}-${u.active}`} me={me} u={u} teams={teams} />
+              <UserRow key={`${u.id}-${u.name}-${u.email}-${u.job_title}-${u.role}-${u.team_id}-${u.active}-${u.is_bidder}`} me={me} u={u} teams={teams} />
             ))}
           </tbody>
         </table>

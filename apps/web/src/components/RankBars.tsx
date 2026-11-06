@@ -4,6 +4,7 @@ import { useState } from "react";
 import { fmt } from "@/lib/format";
 import type { TeamWeekRow } from "@/lib/types";
 import Accordion from "./Accordion";
+import Dropdown from "./Dropdown";
 import PersonCell from "./PersonCell";
 import StatusPill from "./StatusPill";
 
@@ -27,12 +28,18 @@ export default function RankBars({ rows, week }: { rows: TeamWeekRow[]; week?: s
       actions={
         rows.length > 0 ? (
           <div className="filters">
-            <select id="order" aria-label="Order by" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-              <option value="total_desc">Points, high to low</option>
-              <option value="total_asc">Points, low to high</option>
-              <option value="achievement_desc">Achievement %, high to low</option>
-              <option value="name">Name, A to Z</option>
-            </select>
+            <Dropdown<SortKey>
+              id="order"
+              ariaLabel="Order by"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: "total_desc", label: "Points, high to low" },
+                { value: "total_asc", label: "Points, low to high" },
+                { value: "achievement_desc", label: "Achievement %, high to low" },
+                { value: "name", label: "Name, A to Z" },
+              ]}
+            />
           </div>
         ) : null
       }

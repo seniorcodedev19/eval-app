@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useBusy } from "@/components/Busy";
+import Dropdown from "@/components/Dropdown";
 import { addDays, recentWeeks, weekLabel, weekStartOf } from "@/lib/dates";
 
 function href(base: string, extra: Record<string, string>, week: string | undefined, param: string) {
@@ -33,14 +34,16 @@ export function WeekSelect({
     weeks = [{ start: value, end: addDays(value, 6) }, ...weeks].sort((a, b) => b.start.localeCompare(a.start));
   }
   return (
-    <select id={id} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
-      {weeks.map((w) => (
-        <option key={w.start} value={w.start}>
-          {weekLabel(w.start, w.end)}
-          {w.start === thisWeek ? " · this week" : ""}
-        </option>
-      ))}
-    </select>
+    <Dropdown<string>
+      id={id}
+      ariaLabel={label}
+      value={value}
+      onChange={onChange}
+      options={weeks.map((w) => ({
+        value: w.start,
+        label: `${weekLabel(w.start, w.end)}${w.start === thisWeek ? " · this week" : ""}`,
+      }))}
+    />
   );
 }
 
