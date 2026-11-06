@@ -36,11 +36,11 @@ export default function AdminAgentConnect({ status }: { status: SlackInstallStat
     <div className="panel" style={{ maxWidth: 560 }}>
       {status.installed ? (
         <div className="banner note">
-          Eval is added to Slack
+          Huddle is added to Slack
           {status.workspaces[0]?.slack_team_id ? ` (workspace ${status.workspaces[0].slack_team_id})` : ""}.
           {!status.installer_linked
-            ? " Click Connect to Slack again so we can match your Slack user to Eval (needed for DMs)."
-            : " Members are matched by the same email in Slack and Eval."}
+            ? " Click Connect to Slack again so we can match your Slack user to Huddle (needed for DMs)."
+            : " Members are matched by the same email in Slack and Huddle."}
         </div>
       ) : (
         <p className="sub">

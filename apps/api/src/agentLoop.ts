@@ -11,7 +11,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "eval_get_my_week",
-      description: "Get this Eval user's weekly metrics, status, and score. Weeks are Sunday–Saturday UTC.",
+      description: "Get this Huddle user's weekly metrics, status, and score. Weeks are Sunday–Saturday UTC.",
       parameters: { type: "object", properties: { week_start: { type: "string", description: "YYYY-MM-DD Sunday" } } },
     },
   },
@@ -52,7 +52,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "slack_fetch_messages",
-      description: "Fetch recent messages from a Slack channel the Eval bot is in. channel is a Slack channel ID (C… or D…), not a #name.",
+      description: "Fetch recent messages from a Slack channel the Huddle bot is in. channel is a Slack channel ID (C… or D…), not a #name.",
       parameters: {
         type: "object",
         properties: { channel: { type: "string" }, limit: { type: "number" } },
@@ -64,7 +64,7 @@ const tools = [
     type: "function" as const,
     function: {
       name: "slack_post_message",
-      description: "Post a message as the Eval Slack bot. Use only when they asked you to send it. Preview with confirm=false first.",
+      description: "Post a message as the Huddle Slack bot. Use only when they asked you to send it. Preview with confirm=false first.",
       parameters: {
         type: "object",
         properties: { channel: { type: "string" }, text: { type: "string" }, confirm: { type: "boolean" } },
@@ -187,7 +187,7 @@ export async function runAgentTurn(
   const key = (await openaiKeyFor(user.id)) || process.env.OPENAI_API_KEY;
   if (!key) throw new Error("An admin needs to add an OpenAI API key under Admin → Agent connect");
 
-  const system = `You are the personal Eval agent for ${user.name || user.email} (Eval user ${user.id}, role ${user.role}, team_id ${user.team_id}).
+  const system = `You are the personal Huddle agent for ${user.name || user.email} (Huddle user ${user.id}, role ${user.role}, team_id ${user.team_id}).
 Weeks run Sunday–Saturday UTC. Today is ${todayUtc()}.
 Use tools for facts. Do not invent metric numbers.
 Preview eval_write_daily and slack_post_message with confirm=false until the user clearly agrees.

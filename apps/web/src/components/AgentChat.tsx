@@ -7,7 +7,7 @@ import type { AgentChatMessage, AgentConversation } from "@/lib/types";
 const toolStatus: Record<string, string> = {
   eval_get_my_week: "Looking up your week",
   eval_list_metrics: "Listing metrics",
-  eval_write_daily: "Updating Eval",
+  eval_write_daily: "Updating Huddle",
   slack_search: "Searching Slack",
   slack_fetch_messages: "Reading Slack",
   slack_post_message: "Posting to Slack",

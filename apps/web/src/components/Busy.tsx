@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Spinner } from "./Icons";
+import { BrandSpinner } from "./Icons";
 
 type BusyApi = {
   startNav: () => void;
@@ -84,7 +84,7 @@ export default function BusyShell({ children }: { children: ReactNode }) {
         <>
           <div className="route-bar" role="progressbar" aria-busy="true" aria-label="Loading" />
           <div className="busy-overlay">
-            <Spinner size={28} />
+            <BrandSpinner size={58} />
           </div>
         </>
       ) : null}

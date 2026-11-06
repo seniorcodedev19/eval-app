@@ -1,20 +1,20 @@
+// Self-hosted so builds never depend on reaching fonts.googleapis.com.
+import "@fontsource-variable/ibm-plex-sans";
 import "./globals.css";
 import type { Metadata } from "next";
-import { IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
 import { Suspense } from "react";
 import { auth, signOut } from "@/auth";
 import BusyShell from "@/components/Busy";
+import { Logo } from "@/components/Icons";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import { tryFetch } from "@/lib/api";
 import { themeScript } from "@/lib/theme-script";
 import type { User } from "@/lib/types";
 
-const plex = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" });
-
-export const metadata: Metadata = { title: "Eval", description: "Team performance evaluation" };
+export const metadata: Metadata = { title: "Team Huddle", description: "Weekly team reviews and collaboration" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={plex.className}>
+      <body>
         <Script id="theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
@@ -43,7 +43,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <main className="main solo">
                 <div className="solo-head">
                   <Link href="/" className="brand" style={{ padding: 0, textDecoration: "none" }}>
-                    Eval
+                    <span className="brand-logo">
+                      <Logo size={17} />
+                    </span>
+                    <span className="brand-text">
+                      <span className="brand-mark">Team</span> Huddle
+                    </span>
                   </Link>
                   <ThemeToggle />
                 </div>

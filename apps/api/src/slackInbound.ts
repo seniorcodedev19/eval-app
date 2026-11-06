@@ -160,7 +160,7 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
   if (ev.type === "assistant_thread_started") {
     const th = ev.assistant_thread;
     if (!th?.channel_id || !th.thread_ts) return;
-    await postSlackReply(teamId, null, th.channel_id, th.thread_ts, "Hi — send a message here and I’ll help with Eval.");
+    await postSlackReply(teamId, null, th.channel_id, th.thread_ts, "Hi — send a message here and I’ll help with Huddle.");
     return;
   }
 
@@ -181,7 +181,7 @@ export async function handleSlackEnvelope(body: SlackEnvelope): Promise<void> {
       null,
       ev.channel,
       threadTs,
-      "I can’t match you to an Eval account. Use the same email in Slack and Eval. An admin connects Slack under Admin → Agent connect.",
+      "I can’t match you to a Huddle account. Use the same email in Slack and Huddle. An admin connects Slack under Admin → Agent connect.",
     );
     return;
   }

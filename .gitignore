@@ -7,3 +7,5 @@ dist
 .vercel
 next-env.d.ts
 *.tsbuildinfo
+CLAUDE.md
+IDEAS.md

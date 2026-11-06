@@ -1,10 +1,10 @@
 import { signOut } from "@/auth";
 import type { User } from "@/lib/types";
 import type { NavItem } from "./NavLinks";
-import Avatar from "./Avatar";
+import { Logo } from "./Icons";
 import LogoutButton from "./LogoutButton";
 import NavLinks from "./NavLinks";
-import ThemeToggle from "./ThemeToggle";
+import UserMenu from "./UserMenu";
 
 export default function Nav({ me }: { me: User }) {
   const links: NavItem[] = [
@@ -13,7 +13,6 @@ export default function Nav({ me }: { me: User }) {
     { href: "/time", label: "Time tracking" },
     { href: "/interviews", label: "Interviews" },
     { href: "/agent", label: "Agent" },
-    { href: "/profile", label: "Profile" },
   ];
   if (me.role === "admin") {
     links.push({
@@ -29,25 +28,29 @@ export default function Nav({ me }: { me: User }) {
 
   return (
     <nav className="side" aria-label="Main">
-      <div className="brand">Eval</div>
+      <div className="brand brand-stack">
+        <span className="brand-logo">
+          <Logo size={30} />
+        </span>
+        <span className="brand-text">
+          <span className="brand-mark">Team</span> Huddle
+        </span>
+      </div>
       <NavLinks links={links} />
       <div className="side-footer">
-        <ThemeToggle />
-        <div className="who">
-          <Avatar name={me.name} email={me.email} src={me.avatar} size={40} />
-          <div className="who-meta">
-            <strong>{me.name || me.email}</strong>
-            {me.role}
-          </div>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <LogoutButton />
-          </form>
-        </div>
+        <UserMenu
+          me={me}
+          logout={
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/" });
+              }}
+            >
+              <LogoutButton />
+            </form>
+          }
+        />
       </div>
     </nav>
   );

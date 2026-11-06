@@ -1,12 +1,15 @@
 import Accordion from "@/components/Accordion";
 import Breakdown from "@/components/Breakdown";
 import PointsChart from "@/components/PointsChart";
+import StatTiles from "@/components/StatTiles";
 import StatusPill from "@/components/StatusPill";
+import TeamTiles from "@/components/TeamTiles";
+import { TeamDailyDonut, TeamStatusDonut } from "@/components/TeamOverview";
 import TeamWeekTable from "@/components/TeamWeekTable";
 import WeekGrid from "@/components/WeekGrid";
 import WeekPicker from "@/components/WeekPicker";
 import { apiFetch, tryFetch } from "@/lib/api";
-import { weekParam } from "@/lib/dates";
+import { addDays, weekParam } from "@/lib/dates";
 import type { TeamWeekRow, User, WeekData } from "@/lib/types";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
@@ -25,13 +28,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const d = data.data;
   const rows = team.ok ? team.data.rows.filter((r) => r.role !== "admin") : [];
 
+  // Last week, only to show the change on the team tiles.
+  const prev = await tryFetch<{ rows: TeamWeekRow[] }>(
+    `/team-week?week_start=${addDays(d.week_start, -7)}`,
+  );
+  const prevRows = prev.ok ? prev.data.rows.filter((r) => r.role !== "admin") : null;
+
   return (
     <>
       <div className="head">
         <div>
           <h1>Dashboard</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Team points and weekly results. Open a section to hide or show it.
+            Team points and weekly results.
           </p>
         </div>
         <WeekPicker
@@ -48,6 +57,22 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           }
         />
       </div>
+
+      {rows.length > 0 ? <TeamTiles rows={rows} prevRows={prevRows} /> : null}
+      {me.role !== "admin" ? <StatTiles data={d} /> : null}
+
+      {rows.length > 0 ? (
+        <div className="two" style={{ marginBottom: 12 }}>
+          <div className="panel">
+            <h2 className="panel-title">Team overview</h2>
+            <TeamStatusDonut rows={rows} />
+          </div>
+          <div className="panel">
+            <h2 className="panel-title">Team daily score</h2>
+            <TeamDailyDonut rows={rows} days={d.days} />
+          </div>
+        </div>
+      ) : null}
 
       <div style={{ marginBottom: 12 }}>
         {!team.ok ? (

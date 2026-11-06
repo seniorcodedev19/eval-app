@@ -1,3 +1,54 @@
+// Leading icon inside an auth form field.
+export function FieldIcon({ name }: { name: "mail" | "lock" | "user" }) {
+  const common = {
+    width: 17,
+    height: 17,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true as const,
+  };
+  if (name === "mail") {
+    return (
+      <svg {...common}>
+        <rect x="2.8" y="5" width="18.4" height="14" rx="3" />
+        <path d="m3.5 7.5 7.3 5.1a2 2 0 0 0 2.4 0l7.3-5.1" />
+      </svg>
+    );
+  }
+  if (name === "lock") {
+    return (
+      <svg {...common}>
+        <rect x="4.2" y="10.3" width="15.6" height="10.2" rx="3" />
+        <path d="M7.8 10.3V7.6a4.2 4.2 0 0 1 8.4 0v2.7" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" />
+    </svg>
+  );
+}
+
+// The Team Huddle mark: three people gathered together.
+export function Logo({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="6.4" r="3.1" />
+      <circle cx="4.9" cy="9.4" r="2.5" />
+      <circle cx="19.1" cy="9.4" r="2.5" />
+      <path d="M12 11.2c3.3 0 6 2.3 6 5.2v1.2a.9.9 0 0 1-.9.9H6.9a.9.9 0 0 1-.9-.9v-1.2c0-2.9 2.7-5.2 6-5.2Z" />
+      <path d="M4.6 13.3c.5 0 1 .05 1.5.16A7.6 7.6 0 0 0 4.3 18H1.5a.8.8 0 0 1-.8-.8v-.8c0-1.7 1.7-3.1 3.9-3.1Z" opacity="0.72" />
+      <path d="M19.4 13.3c2.2 0 3.9 1.4 3.9 3.1v.8a.8.8 0 0 1-.8.8h-2.8a7.6 7.6 0 0 0-1.8-4.54c.49-.11.99-.16 1.5-.16Z" opacity="0.72" />
+    </svg>
+  );
+}
+
 export function Icon({
   name,
   size = 18,
@@ -95,5 +146,28 @@ export function Spinner({ size = 16 }: { size?: number }) {
     <svg className="spinner" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="42 24" />
     </svg>
+  );
+}
+
+// Loading state with the Team Huddle mark held still inside a turning ring.
+export function BrandSpinner({ size = 56 }: { size?: number }) {
+  return (
+    <span className="brand-spinner" style={{ width: size, height: size }} aria-hidden="true">
+      <svg className="brand-spinner-ring" viewBox="0 0 48 48">
+        <circle
+          cx="24"
+          cy="24"
+          r="21"
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="38 94"
+        />
+      </svg>
+      <span className="brand-spinner-mark">
+        <Logo size={Math.round(size * 0.42)} />
+      </span>
+    </span>
   );
 }

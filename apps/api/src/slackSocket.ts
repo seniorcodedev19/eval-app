@@ -19,16 +19,44 @@ async function openUrl(appToken: string): Promise<string> {
   return json.url;
 }
 
-export async function startSlackSocket() {
+// The token lives in Postgres, so a cold/unreachable database looks like a Slack
+// failure here. Back off instead of retrying every 8s forever, and say which it is.
+const TOKEN_RETRY_MAX = 5;
+
+// Socket Mode is off in this version. Set SLACK_SOCKET_MODE=true to turn it back on;
+// everything below still works and is kept for when it is re-enabled.
+const socketModeEnabled = () => /^(1|true|yes|on)$/i.test((process.env.SLACK_SOCKET_MODE ?? "").trim());
+
+export async function startSlackSocket(tokenAttempt = 0) {
   stopCurrent?.();
   stopCurrent = null;
+
+  if (!socketModeEnabled()) {
+    if (tokenAttempt === 0) {
+      console.log("Slack Socket Mode disabled (set SLACK_SOCKET_MODE=true to enable)");
+    }
+    return;
+  }
 
   let appToken = "";
   try {
     appToken = await slackAppToken();
   } catch (err) {
-    console.error("Slack Socket Mode token lookup failed", err instanceof Error ? err.message : err);
-    setTimeout(() => void startSlackSocket(), 8000);
+    const message = err instanceof Error ? err.message : String(err);
+    const dbDown = /timeout|ECONNREFUSED|ENOTFOUND|terminated|Connection/i.test(message);
+    const what = dbDown ? "database is unreachable" : "token lookup failed";
+    if (tokenAttempt >= TOKEN_RETRY_MAX) {
+      console.error(
+        `Slack Socket Mode off: ${what} after ${TOKEN_RETRY_MAX} attempts (${message}). ` +
+          "The API still works; restart it once the database is reachable.",
+      );
+      return;
+    }
+    const wait = Math.min(8000 * 2 ** tokenAttempt, 60_000);
+    console.error(
+      `Slack Socket Mode: ${what} (${message}). Retry ${tokenAttempt + 1}/${TOKEN_RETRY_MAX} in ${wait / 1000}s.`,
+    );
+    setTimeout(() => void startSlackSocket(tokenAttempt + 1), wait);
     return;
   }
   if (!appToken) {

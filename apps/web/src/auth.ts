@@ -22,12 +22,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = String(creds?.email ?? "").trim();
         const password = String(creds?.password ?? "");
         if (!email || !password) return null;
-        const res = await fetch(`${apiUrl}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (!res.ok) return null;
+        let res: Response;
+        try {
+          res = await fetch(`${apiUrl}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+        } catch {
+          // The API is unreachable. Throwing keeps this distinct from a wrong
+          // password, which returns null, so the page can say which it was.
+          throw new Error(`Can't reach the API at ${apiUrl}. Is it running?`);
+        }
+        if (res.status === 401 || res.status === 403) return null;
+        if (!res.ok) throw new Error(`The API returned ${res.status} while signing in.`);
         const user = (await res.json()) as { id: number; email: string; name: string };
         return { id: String(user.id), email: user.email, name: user.name };
       },

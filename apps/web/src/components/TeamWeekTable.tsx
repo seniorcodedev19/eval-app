@@ -71,7 +71,13 @@ export default function TeamWeekTable({
   rows: TeamWeekRow[];
   metrics?: { id: number; name: string }[];
 }) {
-  const people = useMemo(() => rows.filter((r) => r.role !== "admin"), [rows]);
+  const [query, setQuery] = useState("");
+  const all = useMemo(() => rows.filter((r) => r.role !== "admin"), [rows]);
+  const people = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((r) => r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q));
+  }, [all, query]);
   const cols = columns(people, metrics);
   const canApprove = me.role !== "member";
   const [sort, setSort] = useState<SortKey>("total");
@@ -109,9 +115,30 @@ export default function TeamWeekTable({
     return { metricSums, points };
   }, [people, cols]);
 
-  if (people.length === 0) return <div className="empty">No people to show yet this week.</div>;
+  const search = all.length > 4 && (
+    <div className="searchbar table-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.6-3.6" />
+      </svg>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search people…"
+        aria-label="Search people"
+      />
+    </div>
+  );
+
+  if (all.length === 0) return <div className="empty">No people to show yet this week.</div>;
 
   return (
+    <>
+      {search}
+      {people.length === 0 ? (
+        <div className="empty">No one matches “{query}”.</div>
+      ) : (
     <div className="tablewrap">
       <table className="matrix">
         <thead>
@@ -195,5 +222,7 @@ export default function TeamWeekTable({
         </tfoot>
       </table>
     </div>
+      )}
+    </>
   );
 }

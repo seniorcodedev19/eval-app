@@ -46,7 +46,8 @@ export function poolConfig(connectionString = process.env.DATABASE_URL): PoolCon
     ssl,
     max: serverless ? 1 : meta.pooler ? 8 : 5,
     idleTimeoutMillis: serverless ? 5_000 : 20_000,
-    connectionTimeoutMillis: 15_000,
+    // Supabase's pooler can take a while on the first connect after idling.
+    connectionTimeoutMillis: Number(process.env.DATABASE_CONNECT_TIMEOUT_MS) || (serverless ? 15_000 : 30_000),
     keepAlive: !serverless,
     allowExitOnIdle: serverless,
   };

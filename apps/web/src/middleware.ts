@@ -9,5 +9,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Skip API routes, Next internals, and any request for a static file
+  // (anything with a file extension) so public/ assets are served directly.
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.[\\w]+$).*)"],
 };

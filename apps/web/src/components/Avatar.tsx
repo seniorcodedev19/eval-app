@@ -1,4 +1,5 @@
-const PALETTE = ["#0b7a6b", "#2f6f9f", "#c27c0e", "#7a5aa6", "#b4492d", "#4d7c0f", "#1d4e89", "#9a3d6a"];
+// Matches the --s0..--s5 series tokens in globals.css, plus two extra hues.
+const PALETTE = ["#0d8070", "#3b7fb5", "#c8840f", "#7f62ad", "#bd5238", "#5c8a17", "#2a6490", "#a34370"];
 
 function hueIndex(seed: string) {
   let n = 0;

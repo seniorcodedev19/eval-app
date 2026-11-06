@@ -24,7 +24,11 @@ export async function signInWithPassword(email: string, password: string, redire
     await signIn("credentials", { email, password, redirectTo });
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect("/login?error=CredentialsSignin");
+      // CredentialsSignin means authorize() returned null: a bad email or
+      // password. Anything else (CallbackRouteError) means authorize() threw,
+      // so the sign-in broke for a different reason worth reporting as such.
+      const kind = error.type === "CredentialsSignin" ? "CredentialsSignin" : "SignInFailed";
+      redirect(`/login?error=${kind}`);
     }
     throw error;
   }
