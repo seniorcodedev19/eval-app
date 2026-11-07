@@ -58,45 +58,20 @@ export default function TrainingSitesCsv() {
   };
 
   return (
-    <div className="panel">
-      <h2 className="panel-title">Export and import</h2>
-      <p className="sub">
-        A CSV with one row per site: name, url, summary, icon_url, active, sort_order.
-      </p>
-
-      {error && (
-        <div className="banner error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="banner" role="status">
-          Imported: {result.created} added, {result.updated} updated
-          {result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}.
-          {result.skipped.length > 0 && (
-            <ul className="csv-skipped">
-              {result.skipped.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
+    <div className="csv-actions">
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         {/* A plain link: the proxy forwards Content-Disposition, so the
             browser downloads it rather than navigating. */}
-        <a className="btn secondary" href="/api/proxy/training-sites.csv" download>
+        <a className="btn secondary small" href="/api/proxy/training-sites.csv" download>
           Export CSV
         </a>
         <button
-          className="btn secondary"
+          className="btn secondary small"
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={busy}
         >
-          Choose CSV to import…
+          Import CSV
         </button>
         <input
           ref={fileRef}
@@ -107,22 +82,55 @@ export default function TrainingSitesCsv() {
         />
       </div>
 
-      {pending && (
-        <div className="csv-confirm">
-          <p>
-            <strong>{pending.name}</strong> — {pending.rows} row{pending.rows === 1 ? "" : "s"}.
-            Sites are matched by name: existing names are updated, new ones added. Nothing is
-            deleted.
-          </p>
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn" type="button" onClick={apply} disabled={busy}>
-              {busy ? <Spinner size={14} /> : null}
-              {busy ? "Importing…" : `Import ${pending.rows} row${pending.rows === 1 ? "" : "s"}`}
-            </button>
-            <button className="btn secondary" type="button" onClick={clearPending} disabled={busy}>
-              Cancel
-            </button>
-          </div>
+      {/* Messages and the import confirmation drop out of the header flow, so
+          a long filename or a skipped-row list can't stretch the toolbar. */}
+      {(error || result || pending) && (
+        <div className="csv-drop">
+          {error && (
+            <div className="banner error" role="alert">
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <div className="banner" role="status">
+              Imported: {result.created} added, {result.updated} updated
+              {result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}.
+              {result.skipped.length > 0 && (
+                <ul className="csv-skipped">
+                  {result.skipped.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {pending && (
+            <div className="csv-confirm">
+              <p>
+                <strong>{pending.name}</strong> — {pending.rows} row
+                {pending.rows === 1 ? "" : "s"}. Sites are matched by name: existing names are
+                updated, new ones added. Nothing is deleted.
+              </p>
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn" type="button" onClick={apply} disabled={busy}>
+                  {busy ? <Spinner size={14} /> : null}
+                  {busy
+                    ? "Importing…"
+                    : `Import ${pending.rows} row${pending.rows === 1 ? "" : "s"}`}
+                </button>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={clearPending}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

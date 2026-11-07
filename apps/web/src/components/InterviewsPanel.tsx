@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAction } from "@/lib/client";
 import type { Interview, User } from "@/lib/types";
 import Avatar from "./Avatar";
 import Dropdown from "./Dropdown";
+import InterviewCalendar from "./InterviewCalendar";
 import PersonCell from "./PersonCell";
 
 const when = (iso: string) =>
@@ -80,9 +81,56 @@ export default function InterviewsPanel({ me, interviews, members }: { me: User;
   const [memberId, setMemberId] = useState("");
   const [at, setAt] = useState("");
   const [topic, setTopic] = useState("1:1 review");
+  const [view, setView] = useState<"calendar" | "list">("calendar");
+
+  /* The legend lists whoever actually appears on the calendar. Members don't
+     receive /users, so deriving from the interviews keeps the colour key and
+     the filter working for them too. */
+  const calendarPeople = useMemo(() => {
+    const seen = new Map<number, User>();
+    for (const i of interviews) {
+      if (!seen.has(i.member_id)) {
+        seen.set(i.member_id, {
+          id: i.member_id,
+          name: i.member_name,
+          email: i.member_email,
+          avatar: i.member_avatar ?? null,
+        } as User);
+      }
+    }
+    for (const p of people) if (!seen.has(p.id)) seen.set(p.id, p);
+    return [...seen.values()].sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  }, [interviews, people]);
+
+  /* The <input type="datetime-local"> value is local wall-clock with no zone,
+     so build it from the local parts rather than toISOString(), which would
+     shift the time by the UTC offset. */
+  const toLocalInput = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
 
   return (
     <div className="stack">
+      <div className="viewswitch" role="group" aria-label="View">
+        <button
+          type="button"
+          className={view === "calendar" ? "on" : ""}
+          onClick={() => setView("calendar")}
+          aria-pressed={view === "calendar"}
+        >
+          Calendar
+        </button>
+        <button
+          type="button"
+          className={view === "list" ? "on" : ""}
+          onClick={() => setView("list")}
+          aria-pressed={view === "list"}
+        >
+          List
+        </button>
+      </div>
+
       {manage && (
         <div className="panel">
           <div className="row">
@@ -132,13 +180,29 @@ export default function InterviewsPanel({ me, interviews, members }: { me: User;
         </div>
       )}
 
-      <div className="panel">
-        {interviews.length === 0 ? (
-          <div className="empty">{manage ? "No interviews scheduled yet." : "No interviews scheduled with you yet."}</div>
-        ) : (
-          interviews.map((i) => <Card key={`${i.id}-${i.status}-${i.notes ?? ""}`} i={i} canManage={manage} />)
-        )}
-      </div>
+      {view === "calendar" ? (
+        <InterviewCalendar
+          interviews={interviews}
+          people={calendarPeople}
+          onCreate={
+            manage
+              ? (d) => {
+                  setAt(toLocalInput(d));
+                  // The form sits above the calendar; bring it into view.
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              : undefined
+          }
+        />
+      ) : (
+        <div className="panel">
+          {interviews.length === 0 ? (
+            <div className="empty">{manage ? "No interviews scheduled yet." : "No interviews scheduled with you yet."}</div>
+          ) : (
+            interviews.map((i) => <Card key={`${i.id}-${i.status}-${i.notes ?? ""}`} i={i} canManage={manage} />)
+          )}
+        </div>
+      )}
     </div>
   );
 }

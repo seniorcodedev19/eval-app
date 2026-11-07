@@ -243,7 +243,7 @@ export interface AuditPage {
 
 /* ---------- profiles and AI training (migration 015) ---------- */
 
-export type TrainingStatus = "created" | "applied" | "approved" | "rejected" | "on_hold";
+export type TrainingStatus = "created" | "applied" | "approved" | "ongoing" | "rejected";
 
 export interface ProfileAssignee {
   user_id: number;

@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { auth, signOut } from "@/auth";
 import BusyShell from "@/components/Busy";
 import { Logo } from "@/components/Icons";
+import MobileNav from "@/components/MobileNav";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import { tryFetch } from "@/lib/api";
@@ -36,7 +37,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <BusyShell>
             {me ? (
               <div className="shell">
-                <Nav me={me} />
+                {/* MobileNav is inert above 860px: it only adds the top bar
+                    and drawer chrome, which CSS hides on wider screens. */}
+                <MobileNav>
+                  <Nav me={me} />
+                </MobileNav>
                 <main className="main">{children}</main>
               </div>
             ) : (

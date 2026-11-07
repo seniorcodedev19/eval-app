@@ -34,7 +34,7 @@ export default function Nav({ me }: { me: User }) {
     <nav className="side" aria-label="Main">
       <div className="brand brand-stack">
         <span className="brand-logo">
-          <Logo size={30} />
+          <Logo size={46} />
         </span>
         <span className="brand-text">
           <span className="brand-mark">Team</span> Huddle

@@ -103,7 +103,7 @@ export default function TrainingMatrix({ matrix }: { matrix: Matrix }) {
             Cards
           </button>
         </div>
-        <AddSiteInline />
+        <AddSiteInline modal />
       </div>
 
       {view === "kanban" ? (
@@ -185,14 +185,17 @@ export default function TrainingMatrix({ matrix }: { matrix: Matrix }) {
                   </div>
                 </header>
                 {site.summary ? <p className="site-summary">{site.summary}</p> : null}
-                <div className="chips" style={{ marginBottom: 10 }}>
-                  {STATUSES.filter((s) => tally[s]).map((s) => (
-                    <span className={`chip status-${STATUS_TONE[s]}`} key={s}>
-                      {STATUS_LABEL[s]} {tally[s]}
-                    </span>
-                  ))}
-                  {Object.keys(tally).length === 0 && <span className="muted small">No accounts yet</span>}
-                </div>
+                {/* With no accounts the card shows nothing here, so the add
+                    button is the only thing left to act on. */}
+                {Object.keys(tally).length > 0 && (
+                  <div className="chips" style={{ marginBottom: 10 }}>
+                    {STATUSES.filter((s) => tally[s]).map((s) => (
+                      <span className={`chip status-${STATUS_TONE[s]}`} key={s}>
+                        {STATUS_LABEL[s]} {tally[s]}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <SiteAccounts
                   site={site}
                   profiles={matrix.profiles}
@@ -237,10 +240,7 @@ function SiteAccounts({
 
   return (
     <div className="accounts">
-      {withAccount.length === 0 && !adding ? (
-        <p className="muted small accounts-empty">No accounts on this site yet.</p>
-      ) : (
-        withAccount.map((p) => {
+      {withAccount.map((p) => {
           const status = cells.get(`${p.id}:${site.id}`)!;
           const accountId = ids.get(`${p.id}:${site.id}`);
           return (
@@ -276,8 +276,7 @@ function SiteAccounts({
               ) : null}
             </div>
           );
-        })
-      )}
+      })}
 
       {adding ? (
         <div className="account-add">

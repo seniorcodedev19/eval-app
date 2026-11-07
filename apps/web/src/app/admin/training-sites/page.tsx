@@ -1,3 +1,4 @@
+import TrainingSitesCsv from "@/components/TrainingSitesCsv";
 import TrainingSitesManager from "@/components/TrainingSitesManager";
 import { tryFetch } from "@/lib/api";
 import type { TrainingSite } from "@/lib/types";
@@ -16,6 +17,9 @@ export default async function TrainingSitesPage() {
             The AI training sites profiles can hold accounts on.
           </p>
         </div>
+        {/* Export and import are whole-list operations, so they belong beside
+            the page title rather than in the add-a-site panel. */}
+        <TrainingSitesCsv />
       </div>
 
       <TrainingSitesManager sites={s.data} />

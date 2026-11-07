@@ -8,7 +8,7 @@ import { audit, h, HttpError } from "../util";
 
 export const profiles = Router();
 
-export const TRAINING_STATUSES = ["created", "applied", "approved", "rejected", "on_hold"] as const;
+export const TRAINING_STATUSES = ["created", "applied", "approved", "ongoing", "rejected"] as const;
 
 /* How far the assigned bidder has got on a profile. Separate from the
    training-account statuses: a bidder works the opportunity, not a site. */

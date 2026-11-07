@@ -6,11 +6,31 @@ import Dropdown from "./Dropdown";
 import SiteLogo from "./SiteLogo";
 import { useAction } from "@/lib/client";
 import { BIDDER_LABEL, BIDDER_STATUSES, BIDDER_TONE, STATUS_LABEL, STATUS_TONE, STATUSES } from "@/lib/training";
-import type { BidderStatus, ProfilePerson, TeamProfile, TrainingSite, TrainingStatus, User } from "@/lib/types";
+import type { BidderStatus, ProfileAssignee, ProfilePerson, TeamProfile, TrainingSite, TrainingStatus, User } from "@/lib/types";
 
 
 
 type View = "cards" | "list";
+
+/* Format a phone number as it's typed, without ever rejecting what was typed:
+   profiles hold international numbers and extensions, and a formatter that
+   fights the typist is worse than none.
+
+   A plain 10-digit US number (optionally with a leading 1) gets the familiar
+   (555) 010-0100 grouping. Anything else — a leading +, a longer number, any
+   other shape — is passed through untouched apart from collapsing runs of
+   spaces, so existing values and non-US numbers keep working. */
+export function formatPhone(raw: string): string {
+  if (raw.trim().startsWith("+")) return raw.replace(/\s{2,}/g, " ");
+  const digits = raw.replace(/\D/g, "");
+  const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  // Only reformat once it can't be anything but a US-shaped number.
+  if (local.length > 10) return raw.replace(/\s{2,}/g, " ");
+  if (local.length > 6) return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
+  if (local.length > 3) return `(${local.slice(0, 3)}) ${local.slice(3)}`;
+  if (local.length > 0 && /[()\- ]/.test(raw)) return `(${local}`;
+  return raw;
+}
 
 const blank = {
   full_name: "",
@@ -37,19 +57,33 @@ export default function ProfilesPanel({
   const { error, busy, run, setError } = useAction();
   const [view, setView] = useState<View>("cards");
   const [query, setQuery] = useState("");
+  /* 0 = everyone, -1 = unassigned only, otherwise a user id. Kept as a number
+     so it can feed Dropdown<number> like the other pickers. */
+  const [assignee, setAssignee] = useState<number>(0);
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [form, setForm] = useState(blank);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return profiles;
-    return profiles.filter(
-      (p) =>
+    return profiles.filter((p) => {
+      if (assignee === -1 && p.assignees.length > 0) return false;
+      if (assignee > 0 && !p.assignees.some((a) => a.user_id === assignee)) return false;
+      if (!q) return true;
+      return (
         p.full_name.toLowerCase().includes(q) ||
         p.email.toLowerCase().includes(q) ||
-        p.assignees.some((a) => a.name.toLowerCase().includes(q)),
-    );
-  }, [profiles, query]);
+        p.assignees.some((a) => a.name.toLowerCase().includes(q))
+      );
+    });
+  }, [profiles, query, assignee]);
+
+  /* Only people actually assigned to something are worth offering — a list of
+     every user would mostly be options that match nothing. */
+  const assigneeOptions = useMemo(() => {
+    const seen = new Map<number, ProfileAssignee>();
+    for (const p of profiles) for (const a of p.assignees) seen.set(a.user_id, a);
+    return [...seen.values()].sort((x, y) => x.name.localeCompare(y.name));
+  }, [profiles]);
 
   const openNew = () => {
     setError(null);
@@ -102,9 +136,13 @@ export default function ProfilesPanel({
     );
 
   // Only offer people who aren't assigned yet, so the list shrinks as you pick.
-  const unassigned = people.filter((p) => !form.assignee_ids.includes(p.id) && !p.is_bidder);
-  // Bidders are picked separately: they do the bidding, not the profile work.
-  const bidders = people.filter((p) => p.is_bidder);
+  const unassigned = people.filter((p) => !form.assignee_ids.includes(p.id));
+  /* Any user can be named the bidder on a profile — it's a job on this profile,
+     not a property of the account. Users flagged `is_bidder` on Admin › Users
+     sort first, since they're the usual picks. */
+  const bidders = [...people].sort(
+    (a, b) => Number(b.is_bidder) - Number(a.is_bidder) || a.id - b.id,
+  );
 
   const setAccount = (profileId: number, siteId: number, status: TrainingStatus) =>
     run("PUT", "/training-accounts", { profile_id: profileId, site_id: siteId, status });
@@ -131,6 +169,22 @@ export default function ProfilesPanel({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search profiles"
             aria-label="Search profiles"
+          />
+        </div>
+        <div className="profiles-assignee">
+          <Dropdown<number>
+            value={assignee}
+            ariaLabel="Filter by assignee"
+            onChange={setAssignee}
+            options={[
+              { value: 0, label: "All assignees" },
+              { value: -1, label: "Unassigned" },
+              ...assigneeOptions.map((a) => ({
+                value: a.user_id,
+                label: a.name,
+                media: <Avatar name={a.name} email={a.email} src={a.avatar} size={20} />,
+              })),
+            ]}
           />
         </div>
         <div className="viewswitch" role="group" aria-label="View">
@@ -192,9 +246,13 @@ export default function ProfilesPanel({
               <label htmlFor="pf-phone">Phone</label>
               <input
                 id="pf-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                className="input-phone"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+1 555 0100"
+                onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
+                placeholder="(555) 010-0100"
               />
             </div>
             <div>
@@ -217,26 +275,79 @@ export default function ProfilesPanel({
             placeholder="Anything worth remembering about this profile."
           />
 
-          <label htmlFor="pf-assignee">Assigned to</label>
-          {/* Pick from a select, one at a time; chosen people show below as
-              removable pills. A multiple-select hides the unpicked names
-              behind a scroll and is awkward to deselect. */}
-          <div className="assignee-picker">
-            <Dropdown<number>
-              id="pf-assignee"
-              value=""
-              placeholder={unassigned.length === 0 ? "Everyone is assigned" : "Add someone…"}
-              ariaLabel="Add an assignee"
-              disabled={unassigned.length === 0}
-              onChange={addAssignee}
-              options={unassigned.map((p) => ({
-                value: p.id,
-                label: p.name || p.email,
-                hint: p.name ? p.email : undefined,
-                media: <Avatar name={p.name} email={p.email} src={p.avatar} size={22} />,
-              }))}
-            />
+          {/* Assignee, bidder and bidder status line up in one row: they are
+              the three "who is on this" choices. Pick an assignee from the
+              dropdown, one at a time; chosen people show below as removable
+              pills. A multiple-select hides the unpicked names behind a
+              scroll and is awkward to deselect. */}
+          <div className="people-row">
+            <div>
+              <label htmlFor="pf-assignee">Assigned to</label>
+              <Dropdown<number>
+                id="pf-assignee"
+                value=""
+                placeholder={unassigned.length === 0 ? "Everyone is assigned" : "Add someone…"}
+                ariaLabel="Add an assignee"
+                disabled={unassigned.length === 0}
+                onChange={addAssignee}
+                options={unassigned.map((p) => ({
+                  value: p.id,
+                  label: p.name || p.email,
+                  hint: p.name ? p.email : undefined,
+                  media: <Avatar name={p.name} email={p.email} src={p.avatar} size={22} />,
+                }))}
+              />
+            </div>
 
+            <div>
+              <label htmlFor="pf-bidder">Bidder</label>
+              <Dropdown<number>
+                id="pf-bidder"
+                value={form.bidder_id ?? 0}
+                placeholder="No bidder"
+                ariaLabel="Assign a bidder"
+                onChange={(id) =>
+                  setForm((f) => ({
+                    ...f,
+                    bidder_id: id === 0 ? null : id,
+                    // Clearing the bidder clears the status with it; naming
+                    // one starts the work off as assigned.
+                    bidder_status:
+                      id === 0 ? "none" : f.bidder_status === "none" ? "assigned" : f.bidder_status,
+                  }))
+                }
+                options={[
+                  { value: 0, label: "No bidder" },
+                  ...bidders.map((p) => ({
+                    value: p.id,
+                    label: p.name || p.email,
+                    // Flagged bidders are called out; anyone else is still pickable.
+                    hint: p.is_bidder ? "Bidder" : p.name ? p.email : undefined,
+                    media: <Avatar name={p.name} email={p.email} src={p.avatar} size={22} />,
+                  })),
+                ]}
+              />
+            </div>
+            <div>
+              <label htmlFor="pf-bidder-status">Bidder status</label>
+              <Dropdown<BidderStatus>
+                id="pf-bidder-status"
+                value={form.bidder_status}
+                tone={BIDDER_TONE[form.bidder_status]}
+                ariaLabel="Bidder status"
+                disabled={!form.bidder_id}
+                onChange={(st) => setForm((f) => ({ ...f, bidder_status: st }))}
+                options={BIDDER_STATUSES.map((st) => ({
+                  value: st,
+                  label: BIDDER_LABEL[st],
+                  media: <span className={`dd-dot tone-${BIDDER_TONE[st]}`} />,
+                }))}
+              />
+            </div>
+          </div>
+
+          {/* The chosen assignees, below the row so they can wrap freely. */}
+          <div className="assignee-picker">
             {form.assignee_ids.length === 0 ? (
               <span className="muted small">Nobody yet</span>
             ) : (
@@ -260,53 +371,6 @@ export default function ProfilesPanel({
                 })}
               </div>
             )}
-          </div>
-
-          <div className="two bidder-row">
-            <div>
-              <label htmlFor="pf-bidder">Bidder</label>
-              <Dropdown<number>
-                id="pf-bidder"
-                value={form.bidder_id ?? 0}
-                placeholder="No bidder"
-                ariaLabel="Assign a bidder"
-                onChange={(id) =>
-                  setForm((f) => ({
-                    ...f,
-                    bidder_id: id === 0 ? null : id,
-                    // Clearing the bidder clears the status with it; naming
-                    // one starts the work off as assigned.
-                    bidder_status:
-                      id === 0 ? "none" : f.bidder_status === "none" ? "assigned" : f.bidder_status,
-                  }))
-                }
-                options={[
-                  { value: 0, label: "No bidder" },
-                  ...bidders.map((p) => ({
-                    value: p.id,
-                    label: p.name || p.email,
-                    hint: p.name ? p.email : undefined,
-                    media: <Avatar name={p.name} email={p.email} src={p.avatar} size={22} />,
-                  })),
-                ]}
-              />
-            </div>
-            <div>
-              <label htmlFor="pf-bidder-status">Bidder status</label>
-              <Dropdown<BidderStatus>
-                id="pf-bidder-status"
-                value={form.bidder_status}
-                tone={BIDDER_TONE[form.bidder_status]}
-                ariaLabel="Bidder status"
-                disabled={!form.bidder_id}
-                onChange={(st) => setForm((f) => ({ ...f, bidder_status: st }))}
-                options={BIDDER_STATUSES.map((st) => ({
-                  value: st,
-                  label: BIDDER_LABEL[st],
-                  media: <span className={`dd-dot tone-${BIDDER_TONE[st]}`} />,
-                }))}
-              />
-            </div>
           </div>
 
           <div className="row" style={{ marginTop: 14, gap: 8 }}>
@@ -528,10 +592,11 @@ function AccountRow({
 
   return (
     <div className="accounts">
-      {profile.accounts.length === 0 && !adding ? (
-        <p className="muted small accounts-empty">No AI training accounts yet.</p>
-      ) : (
-        profile.accounts.map((a) => (
+      {/* No text for an empty list: the add button below says what to do.
+          The rows scroll inside a capped box; the add button sits outside it
+          so it stays reachable however many accounts a profile has. */}
+      <div className="profile-accounts">
+        {profile.accounts.map((a) => (
           <div className="account-row" key={a.id}>
             <span className="account-site" title={a.site_name}>
               {a.site_name}
@@ -561,8 +626,8 @@ function AccountRow({
               </svg>
             </button>
           </div>
-        ))
-      )}
+        ))}
+      </div>
 
       {adding ? (
         <div className="account-add">

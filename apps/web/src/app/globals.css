@@ -990,33 +990,89 @@ input[type="file"]::file-selector-button:hover { background: var(--canvas); bord
 .login .alt { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
 .login .alt a { color: var(--accent); font-weight: 500; }
 
-@media (max-width: 800px) {
+/* The sidebar column. On desktop the drawer wrapper is simply the column
+   itself, and its mobile chrome (top bar, close button, backdrop) is hidden. */
+.nav-drawer { display: contents; }
+.topbar, .drawer-close, .nav-backdrop { display: none; }
+
+@media (max-width: 860px) {
+  /* One column; the sidebar leaves the flow and slides in over the content. */
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .side {
-    position: static;
-    height: auto;
-    max-height: none;
-    flex-direction: row;
-    flex-wrap: wrap;
+
+  .topbar {
+    display: flex;
     align-items: center;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
     padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
   }
-  .brand { padding: 0 10px 0 2px; }
-  .side-footer {
-    margin-top: 0;
-    margin-left: auto;
-    flex-direction: row;
-    align-items: center;
-    border-top: 0;
-    padding: 0;
+  .topbar-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: none; width: 38px; height: 38px; padding: 0;
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    background: var(--canvas); color: var(--ink); cursor: pointer;
   }
-  .side .who { display: flex; }
-  .theme-toggle { width: auto; }
+  .topbar-burger:hover { background: var(--raise); }
+  .topbar-burger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .topbar-brand {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.02em;
+  }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed; inset: 0; z-index: 50;
+    background: color-mix(in srgb, #000 55%, transparent);
+    animation: backdrop-in 0.16s ease;
+  }
+  @keyframes backdrop-in { from { opacity: 0; } }
+
+  /* The drawer itself: off-canvas until .open. */
+  .nav-drawer {
+    display: block;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 51;
+    width: min(290px, 86vw);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: var(--shadow-lift);
+  }
+  .nav-drawer.open { transform: translateX(0); }
+  .nav-drawer .side {
+    position: static;
+    height: 100%;
+    width: 100%;
+    border-right: 1px solid var(--line);
+  }
+
+  .drawer-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; top: 12px; right: 12px; z-index: 1;
+    width: 32px; height: 32px; padding: 0;
+    border: 0; border-radius: var(--r-sm);
+    background: none; color: var(--muted); cursor: pointer;
+  }
+  .drawer-close:hover { background: var(--canvas); color: var(--ink); }
+  .drawer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
   .main { padding: 18px 16px 48px; }
   .score .num { font-size: 38px; }
   .trend { height: 140px; }
+
+  /* Header controls stack and fill rather than sitting beside the title. */
+  .head { gap: 12px; }
+  .head .filters, .head-actions { margin-left: 0; width: 100%; }
+  .filters { width: 100%; }
+  /* The 176px floor overflowed a phone once chips sat beside it. */
+  .filters select, .filters .dd { min-width: 0; max-width: none; flex: 1 1 140px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer { transition: none; }
+  .nav-backdrop { animation: none; }
 }
 
 /* ---------- weekly app ---------- */
@@ -1489,15 +1545,15 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
 }
 
 /* ---------- brand mark ---------- */
+/* The mark on its own, as it appears at the centre of the loading spinner:
+   accent-coloured, no tile behind it. */
 .brand-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 9px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--accent);
   flex-shrink: 0;
 }
 /* Sidebar lockup: larger mark stacked over the wordmark, as in the design. */
@@ -1510,8 +1566,6 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
 .brand-stack .brand-logo {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px -3px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .brand-stack .brand-text { font-size: 17px; justify-content: center; }
 
@@ -1873,7 +1927,8 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
   white-space: nowrap;
 }
 .account-row select { min-width: 124px; padding-block: 6px; font-size: 12.5px; }
-.account-row .dd { flex: none; width: 148px; }
+/* Shrinkable: inside a scrolling card the fixed width overflowed sideways. */
+.account-row .dd { flex: 0 1 148px; width: 148px; min-width: 0; }
 .account-row .dd-trigger { min-height: 32px; padding: 4px 8px; font-size: 12.5px; }
 .account-remove {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1887,6 +1942,24 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
 .account-add .dd { flex: 1; width: auto; }
 .account-addbtn { align-self: start; gap: 5px; margin-top: 4px; }
 .accounts-empty { margin: 0; }
+
+/* On a profile card the account list is capped and scrolls, so one profile
+   with many sites can't stretch the card past its neighbours. The Dropdown
+   sheet is portalled to <body> and repositions on capture-phase scroll, so
+   it is not clipped by this container. */
+.profile-accounts {
+  display: grid; gap: 6px; align-content: start;
+  max-height: 232px; overflow-y: auto; overflow-x: hidden;
+  /* Room for the scrollbar so it doesn't sit on top of the remove buttons. */
+  padding-right: 4px;
+}
+/* An empty list must not leave a gap above the add button. */
+.profile-accounts:empty { display: none; }
+.profile-accounts::-webkit-scrollbar { width: 8px; }
+.profile-accounts::-webkit-scrollbar-thumb {
+  background: var(--line-strong); border-radius: 999px;
+}
+.profile-accounts::-webkit-scrollbar-track { background: transparent; }
 
 /* Status chips, tinted per state. */
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -1908,6 +1981,8 @@ textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
 .chip.status-danger { background: var(--danger-wash); color: var(--danger); border-color: transparent; }
 .chip.status-neutral { background: var(--accent-wash); color: var(--accent-strong); border-color: transparent; }
 .chip.status-muted { background: var(--canvas); color: var(--muted); }
+/* Ongoing: work in flight, distinct from Created's accent and Approved's green. */
+.chip.status-violet { background: color-mix(in srgb, var(--s3) 14%, transparent); color: var(--s3); border-color: transparent; }
 
 /* Toggleable chip, used for assignee picking and site activation. */
 button.chip.toggle { cursor: pointer; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; }
@@ -1921,7 +1996,15 @@ button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--
 
 .assignees { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 .profile-editor { margin-bottom: 12px; }
-.profile-editor textarea { width: 100%; }
+/* Inputs default to a ~20-character size, which truncated an email or a
+   LinkedIn URL mid-value. Fill the column instead, and line the three
+   dropdowns up with the fields above them. */
+.profile-editor textarea,
+.profile-editor input,
+.profile-editor .dd { width: 100%; }
+.profile-editor .assignee-picker .dd { max-width: none; }
+/* Digits line up and read as a number rather than prose. */
+.input-phone { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .btn.small { padding: 5px 10px; font-size: 12.5px; }
 .muted.small, .small { font-size: 12px; }
 
@@ -2053,6 +2136,39 @@ button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--
 .addsite-fields textarea { resize: vertical; font-family: inherit; }
 .addsite-actions { display: flex; gap: 7px; flex-wrap: wrap; }
 
+/* Centred dialog, used where an inline form would push a page's content down. */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  background: color-mix(in srgb, #000 55%, transparent);
+  animation: backdrop-in 0.16s ease;
+}
+.modal {
+  position: fixed; z-index: 61;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(80vh, 680px); overflow-y: auto;
+  padding: 18px 20px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lift);
+  text-align: left;
+}
+.modal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.modal-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.012em; flex: 1; }
+.modal .modal-close { display: inline-flex; position: static; }
+
+/* A training site row editing in place. Reuses the add-a-site field styling so
+   correcting a site looks like adding one. */
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.site-edit-row > td { background: var(--canvas); }
+.site-edit { display: flex; gap: 11px; align-items: flex-start; flex-wrap: wrap; }
+.site-edit-fields { display: grid; gap: 4px; flex: 1; min-width: 240px; }
+.site-edit-fields label { font-size: 11px; color: var(--muted); font-weight: 600; }
+.site-edit-fields input, .site-edit-fields textarea { font-size: 13px; padding-block: 7px; }
+.site-edit-fields textarea { resize: vertical; font-family: inherit; }
+.site-edit-actions { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+
 /* A training site's icon, with a monogram fallback when it can't load. */
 .sitelogo {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2084,6 +2200,16 @@ button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--
 }
 
 /* CSV import: the confirmation step and the skipped-row report. */
+/* Export/import sits in the page header. display:contents lifts both children
+   into .head's flex row: the buttons pin to the right of the title, while the
+   messages and import confirmation take a full line below, so a long filename
+   or a skipped-row list can't stretch the toolbar. */
+.csv-actions { display: contents; }
+.csv-actions > .row { margin-left: auto; flex-shrink: 0; }
+.csv-drop { flex-basis: 100%; order: 99; }
+.csv-drop .banner { margin-bottom: 0; }
+.csv-drop .csv-confirm { margin-top: 9px; }
+
 .csv-confirm {
   margin-top: 11px; padding: 11px; border: 1px solid var(--line);
   border-radius: 10px; background: var(--canvas);
@@ -2184,8 +2310,20 @@ button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--
 .dd-dot.tone-muted { background: var(--muted); }
 
 /* Assignee picker: a select to add, removable pills for what's chosen. */
+.profiles-assignee .dd { min-width: 180px; }
 .assignee-picker { display: grid; gap: 9px; }
 .assignee-picker .dd { max-width: 320px; }
+
+/* Assignee, bidder and bidder status: the three "who is on this" choices,
+   on one row so their controls line up. */
+.people-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin-top: 14px;
+}
+.people-row + .assignee-picker { margin-top: 9px; }
+@media (max-width: 800px) {
+  .people-row { grid-template-columns: 1fr; }
+}
 
 /* Sliding on/off switch, used instead of a checkbox. */
 .switch {
@@ -2271,4 +2409,113 @@ button.chip.toggle:focus-visible { outline: none; box-shadow: 0 0 0 2.5px var(--
 .site-summary-sm {
   display: block; font-size: 11.5px; color: var(--muted); font-weight: 400;
   max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---------- interview calendar ---------- */
+/* A week time-grid, in the viewer's own time zone. The sidebar filters by
+   person; the grid scrolls independently so the day headers stay put. */
+.cal { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 16px; align-items: start; }
+.cal-side { display: grid; gap: 10px; }
+.cal-legend { padding: 14px; }
+.cal-person {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; cursor: pointer; min-width: 0;
+}
+.cal-person input { margin: 0; }
+.cal-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.cal-person-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.cal-person-text strong { font-size: 13px; font-weight: 500; }
+.cal-person-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-tz { margin: 0; padding: 0 2px; }
+
+.cal-main {
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); overflow: hidden;
+}
+.cal-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+}
+.cal-range { margin: 0 0 0 6px; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+
+.cal-head, .cal-grid { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); }
+.cal-head { border-bottom: 1px solid var(--line); background: var(--surface); }
+.cal-dayhead {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 4px; font-size: 12.5px; color: var(--muted);
+  border-left: 1px solid var(--line);
+}
+.cal-daynum { font-weight: 600; color: var(--ink); }
+.cal-dayhead.today .cal-daynum {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink);
+}
+
+.cal-grid { max-height: 62vh; overflow-y: auto; position: relative; }
+.cal-gutter { position: relative; }
+.cal-hour {
+  display: block; position: relative;
+  font-size: 11px; color: var(--muted); text-align: right; padding-right: 8px;
+}
+/* The label sits on the line it names, not inside the hour below it. */
+.cal-hour span { position: absolute; top: -6px; right: 8px; }
+
+.cal-col { position: relative; border-left: 1px solid var(--line); }
+.cal-slot {
+  display: block; width: 100%; padding: 0;
+  border: 0; border-top: 1px dashed var(--line);
+  background: none; cursor: pointer;
+}
+.cal-slot:hover { background: var(--canvas); }
+.cal-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.cal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 2; }
+.cal-now::before {
+  content: ""; position: absolute; left: -4px; top: -3px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--danger);
+}
+
+.cal-event {
+  position: absolute; z-index: 3;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 2px 6px; overflow: hidden;
+  border: 0; border-left: 3px solid currentColor; border-radius: 5px;
+  text-align: left; cursor: pointer; font: inherit; font-size: 11.5px;
+  line-height: 1.32;
+  background: var(--surface);
+}
+.cal-event:hover { filter: brightness(1.12); }
+.cal-event:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-event-top { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.cal-event-time { font-weight: 600; flex: none; }
+.cal-event-title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-event-sub {
+  color: inherit; opacity: 0.75; font-size: 11px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* A cancelled interview stays visible but reads as struck through. */
+.cal-event.status-cancelled { opacity: 0.55; }
+.cal-event.status-cancelled .cal-event-title { text-decoration: line-through; }
+
+/* Per-person colours, reusing the chart series tokens. */
+.cal-dot.s0, .cal-event.s0 { color: var(--s0); }
+.cal-dot.s1, .cal-event.s1 { color: var(--s1); }
+.cal-dot.s2, .cal-event.s2 { color: var(--s2); }
+.cal-dot.s3, .cal-event.s3 { color: var(--s3); }
+.cal-dot.s4, .cal-event.s4 { color: var(--s4); }
+.cal-dot.s5, .cal-event.s5 { color: var(--s5); }
+.cal-dot.s0, .cal-dot.s1, .cal-dot.s2,
+.cal-dot.s3, .cal-dot.s4, .cal-dot.s5 { background: currentColor; }
+.cal-event.s0, .cal-event.s1, .cal-event.s2,
+.cal-event.s3, .cal-event.s4, .cal-event.s5 {
+  background: color-mix(in srgb, currentColor 16%, var(--surface));
+}
+
+@media (max-width: 860px) {
+  .cal { grid-template-columns: minmax(0, 1fr); }
+  .cal-head, .cal-grid { grid-template-columns: 44px repeat(7, minmax(78px, 1fr)); }
+  /* Below this the columns are unreadable, so the grid scrolls sideways. */
+  .cal-main { overflow-x: auto; }
+  .cal-head, .cal-grid { min-width: 590px; }
 }

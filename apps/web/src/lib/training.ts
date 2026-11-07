@@ -1,11 +1,13 @@
 import type { BidderStatus, TrainingStatus } from "./types";
 
+/* Declaration order is display order: STATUSES is derived from these keys,
+   so the board columns and every dropdown follow it. */
 export const STATUS_LABEL: Record<TrainingStatus, string> = {
   created: "Created",
   applied: "Applied",
   approved: "Approved",
+  ongoing: "Ongoing",
   rejected: "Rejected",
-  on_hold: "On hold",
 };
 
 /** Tone per status, mapped onto the existing chip colours. */
@@ -13,8 +15,8 @@ export const STATUS_TONE: Record<TrainingStatus, string> = {
   created: "neutral",
   applied: "warn",
   approved: "ok",
+  ongoing: "violet",
   rejected: "danger",
-  on_hold: "muted",
 };
 
 export const STATUSES = Object.keys(STATUS_LABEL) as TrainingStatus[];

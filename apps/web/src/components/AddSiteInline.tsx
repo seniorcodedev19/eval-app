@@ -11,7 +11,7 @@ import type { SiteMetaPreview } from "@/lib/types";
    editable, and nothing is saved until "Add site".
    Renaming and removing stay admin-only, since every profile's matrix row
    depends on the site list staying stable. */
-export default function AddSiteInline() {
+export default function AddSiteInline({ modal = false }: { modal?: boolean }) {
   const { error, busy, run, setError } = useAction();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -72,7 +72,7 @@ export default function AddSiteInline() {
     );
   }
 
-  return (
+  const form = (
     <div className="addsite">
       <div className="addsite-url">
         <input
@@ -133,5 +133,33 @@ export default function AddSiteInline() {
         </span>
       )}
     </div>
+  );
+
+  if (!modal) return form;
+
+  /* As a dialog: the AI Training page opens this from a toolbar button, where
+     an inline form would push the whole board down. The backdrop closes it,
+     matching the nav drawer and the rest of the app. */
+  return (
+    <>
+      <button className="btn secondary" type="button" onClick={() => setOpen(true)}>
+        Add site
+      </button>
+      <div className="modal-backdrop" onClick={reset} aria-hidden="true" />
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Add a training site">
+        <div className="modal-head">
+          <h2>Add a training site</h2>
+          <button type="button" className="drawer-close modal-close" onClick={reset} aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <p className="sub" style={{ marginTop: 0 }}>
+          Paste a URL and fetch the name, summary and icon from the site.
+        </p>
+        {form}
+      </div>
+    </>
   );
 }

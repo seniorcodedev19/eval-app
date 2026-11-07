@@ -16,18 +16,43 @@ const listSql = `
   join users m on m.id = i.member_id
   join users v on v.id = i.interviewer_id`;
 
+/* `from` and `to` are optional ISO instants bounding scheduled_at, half-open
+   so a week's end is the next week's start with no overlap. The calendar asks
+   for the range it is showing; without them this still answers with the 100
+   most recent, as it always did. */
+const rangeQuery = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});
+
 interviews.get("/interviews", h(async (req, res) => {
   const a = req.user!;
-  let where = "";
-  let params: unknown[] = [];
+  const { from, to } = rangeQuery.parse(req.query);
+  const clauses: string[] = [];
+  const params: unknown[] = [];
   if (a.role === "manager") {
-    where = "where m.team_id = $1 or i.interviewer_id = $2";
-    params = [a.team_id, a.id];
+    params.push(a.team_id, a.id);
+    clauses.push(`(m.team_id = $${params.length - 1} or i.interviewer_id = $${params.length})`);
   } else if (a.role === "member") {
-    where = "where i.member_id = $1";
-    params = [a.id];
+    params.push(a.id);
+    clauses.push(`i.member_id = $${params.length}`);
   }
-  const { rows } = await pool.query(`${listSql} ${where} order by i.scheduled_at desc limit 100`, params);
+  if (from) {
+    params.push(from);
+    clauses.push(`i.scheduled_at >= $${params.length}`);
+  }
+  if (to) {
+    params.push(to);
+    clauses.push(`i.scheduled_at < $${params.length}`);
+  }
+  const where = clauses.length ? `where ${clauses.join(" and ")}` : "";
+  /* A bounded range is already small, so return all of it — a busy week must
+     not lose events to a limit meant for the unbounded list. */
+  const limit = from || to ? "" : "limit 100";
+  const { rows } = await pool.query(
+    `${listSql} ${where} order by i.scheduled_at desc ${limit}`,
+    params,
+  );
   res.json(rows);
 }));
 
